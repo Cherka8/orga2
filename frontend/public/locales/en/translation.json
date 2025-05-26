@@ -1,0 +1,474 @@
+{
+  "actorsToolbar": {
+    "human": "Actor",
+    "location": "Location",
+    "title": "Actors Management",
+    "addHuman": "Add Actor",
+    "addLocation": "Add Location",
+    "addGroup": "Add Group",
+    "tabs": {
+      "allActors": "All",
+      "groups": "Groups",
+      "time": "Time",
+      "events": "Events",
+      "share": "Share"
+    },
+    "filters": {
+      "all": "All",
+      "humans": "Actors",
+      "locations": "Locations"
+    },
+    "searchPlaceholder": "Search actors"
+  },
+  "humanForm": {
+    "photoUrlLabel": "Photo URL",
+    "firstNameLabel": "First Name *",
+    "lastNameLabel": "Last Name *",
+    "roleLabel": "Role",
+    "emailLabel": "Email",
+    "phoneLabel": "Phone Number",
+    "photoUrlPlaceholder": "https://example.com/photo.jpg",
+    "firstNamePlaceholder": "John",
+    "lastNamePlaceholder": "Doe",
+    "rolePlaceholder": "Project Manager",
+    "emailPlaceholder": "john.doe@example.com",
+    "phonePlaceholder": "+33 6 12 34 56 78",
+    "photoPlaceholderText": "No Photo",
+    "cancelButton": "Cancel",
+    "createButton": "Create",
+    "updateButton": "Update",
+    "error": {
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required",
+      "invalidEmail": "Invalid email format"
+    },
+    "photoAlt": "Actor photo",
+    "photoText": "Photo"
+  },
+  "locationForm": {
+    "nameLabel": "Location Name *",
+    "photoUrlLabel": "Photo URL",
+    "addressLabel": "Address",
+    "namePlaceholder": "Office Paris",
+    "photoUrlPlaceholder": "https://example.com/photo.jpg",
+    "addressPlaceholder": "123 Main Street, Anytown USA",
+    "photoPlaceholderText": "Location Image",
+    "photoErrorText": "Invalid URL",
+    "photoAlt": "Location Preview",
+    "cancelButton": "Cancel",
+    "createButton": "Create",
+    "updateButton": "Update",
+    "error": {
+      "nameRequired": "Location name is required"
+    }
+  },
+  "actorFormModal": {
+    "title": {
+      "addHuman": "Add New Actor",
+      "editHuman": "Edit Actor",
+      "addLocation": "Add New Location",
+      "editLocation": "Edit Location"
+    }
+  },
+  "actorCard": {
+    "unknownActor": "Unknown Actor",
+    "ariaLabels": {
+      "viewDetails": "View details",
+      "edit": "Edit actor",
+      "delete": "Delete actor"
+    }
+  },
+  "actorDetailsModal": {
+    "noImage": "No image",
+    "detailsTitle": {
+      "location": "Location Details",
+      "human": "Actor Details",
+      "contactInfo": "Contact Information",
+      "personalInfo": "Personal Information"
+    },
+    "fields": {
+      "name": "Name:",
+      "address": "Address:",
+      "role": "Role:",
+      "email": "Email:",
+      "phone": "Phone:"
+    },
+    "closeButton": "Close",
+    "closeSrOnly": "Close"
+  },
+  "actorsList": {
+    "deleteConfirm": "Are you sure you want to delete this actor?",
+    "empty": {
+      "title": "No actors found",
+      "description": "Create a new actor using the buttons above"
+    }
+  },
+  "actorTypes": {
+    "human": "Actor",
+    "location": "Location"
+  },
+  "groupsTab": {
+    "confirmDelete": "Are you sure you want to delete this group?",
+    "listTitle": "Groups",
+    "addGroupButton": "Add Group",
+    "noGroupSelectedTitle": "No group selected",
+    "noGroupSelectedDescription": "Select a group from the list or create a new one",
+    "modalTitleEdit": "Edit Group",
+    "modalTitleAdd": "Add New Group"
+  },
+  "groupsList": {
+    "emptyMessage": "No groups yet. Create your first group!",
+    "member_one": "member",
+    "member_other": "members",
+    "ariaLabelEdit": "Edit group",
+    "ariaLabelDelete": "Delete group",
+    "noGroupsYet": "No groups yet. Create your first group!"
+  },
+  "groupForm": {
+    "labelName": "Group Name *",
+    "errorNameRequired": "Group name is required",
+    "labelDescription": "Description",
+    "labelPhoto": "Photo",
+    "placeholderPhotoUrl": "https://example.com/photo.jpg",
+    "altPreview": "Preview",
+    "altInvalidUrl": "Invalid URL",
+    "buttonCancel": "Cancel",
+    "buttonUpdate": "Update",
+    "buttonCreate": "Create"
+  },
+  "groupMembers": {
+    "ariaLabelRemoveMember": "Remove {{actorName}} from group",
+    "membersSectionTitle": "Group Members",
+    "membersCount_one": "{{count}} member",
+    "membersCount_other": "{{count}} members",
+    "emptyMembersDroppable": "Drag actors here from the right list to add them.",
+    "availableSectionTitle": "Available Actors",
+    "availableCount_one": "{{count}} actor",
+    "availableCount_other": "{{count}} actors",
+    "filterPlaceholder": "Filter actors",
+    "emptyAvailableDroppable": "No available actors found",
+    "ariaLabelAddMember": "Add {{actorName}} to group"
+  },
+  "sidebar": {
+    "config": {
+      "title": "Configuration",
+      "language": "Language",
+      "theme": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "calendar": "Calendar",
+    "allActorsLink": "All Actors",
+    "actors": "Actors",
+    "groupsLink": "Groups",
+    "views": "Views",
+    "timeLink": "Time",
+    "eventsLink": "Events",
+    "shareLink": "Share",
+    "configuration": "Configuration"
+  },
+  "viewsPanel": {
+    "actorsSectionTitle": "Actors",
+    "groupsSectionTitle": "Groups",
+    "colorsSectionTitle": "Colors",
+    "fallbackActorName": "Actor",
+    "fallbackGroupName": "Group",
+    "searchActorPlaceholder": "Search actors..."
+  },
+  "viewsSection": {
+    "noItemsAvailable": "No items available"
+  },
+  "viewItem": {
+    "share": "Share",
+    "shareCopied": "Link copied!",
+    "shareError": "Copy error",
+    "fallbackName": "Untitled",
+    "hideTooltip": "Hide",
+    "showTooltip": "Show"
+  },
+  "daySelector": {
+    "fiveDays": "5 days",
+    "sevenDays": "7 days"
+  },
+  "businessHoursSelector": {
+    "title": "Business Hours",
+    "startLabel": "Start:",
+    "endLabel": "End:",
+    "errorStartBeforeEnd": "Start time must be before end time",
+    "errorEndAfterStart": "End time must be after start time"
+  },
+  "colors": {
+    "indigo": "Indigo",
+    "rouge": "Red",
+    "orange": "Orange",
+    "ambre": "Amber",
+    "emeraude": "Emerald",
+    "cyan": "Cyan",
+    "bleu": "Blue",
+    "violet": "Violet",
+    "rose": "Pink",
+    "indigo-clair": "Light Indigo",
+    "turquoise": "Turquoise",
+    "citron-vert": "Lime",
+    "pourpre": "Purple",
+    "noir": "Black",
+    "gris-ardoise": "Slate Gray"
+  },
+  "timeView": {
+    "title": "Time Tracking",
+    "hoursCalculatedFromEvents": "Hours calculated based on associated events",
+    "hoursChartTitle": "Hours per Actor",
+    "actor": "actor",
+    "actorsSelected": "actors selected",
+    "actorSelected": "actor selected",
+    "noActorsSelectedTitle": "No Actors Selected",
+    "noActorsSelectedHint": "Select actors from the list to display their time data.",
+    "calculatingHours": "Calculating hours...",
+    "datePicker": {
+      "startLabel": "Start",
+      "endLabel": "End",
+      "placeholder": "Select date"
+    }
+  },
+  "actorTimeList": {
+    "title": "Actors",
+    "searchPlaceholder": "Search actors...",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "noResultsFound": "No actors found for this search.",
+    "noActorsAvailable": "No actors available.",
+    "selectedCount_one": "{{count}} actor selected",
+    "selectedCount_other": "{{count}} actors selected"
+  },
+  "actorHoursChart": {
+    "title": "Hours per Actor",
+    "datasetLabel": "Hours Worked",
+    "tooltipSuffix": "hours",
+    "yAxisSuffix": "h",
+    "duration": {
+      "hourSuffix": "h",
+      "minuteSuffix": "m"
+    }
+  },
+  "actorEventsView": {
+    "selectActorPrompt": "Select an actor"
+  },
+  "selectableActorList": {
+    "title_one": "{{count}} Actor",
+    "title_other": "{{count}} Actors",
+    "searchPlaceholder": "Search for an actor...",
+    "noResults": "No actors found",
+    "noActorsAvailable": "No actors available",
+    "tryAnotherSearch": "Try a different search term",
+    "addActorsHint": "Add actors to see them here"
+  },
+  "actorEventList": {
+    "noEventsTitle": "No Events",
+    "noEventsDescription": "No events to display for this actor.",
+    "untitledEvent": "Untitled",
+    "unspecifiedLocation": "Location not specified"
+  },
+  "eventForm": {
+    "addTitlePlaceholder": "Add title",
+    "eventColorTooltip": "Change event color",
+    "searchActorsPlaceholder": "Search people, locations, or objects...",
+    "filters": {
+      "all": "All",
+      "humans": "Actors",
+      "locations": "Locations",
+      "groups": "Groups"
+    },
+    "locationColumnHeader": "Location",
+    "noLocationSelected": "No location selected",
+    "participantsColumnHeader": "Participants",
+    "presenterTooltip": {
+      "mark": "Mark as presenter",
+      "remove": "Remove as presenter"
+    },
+    "noParticipantsSelected": "No participants selected",
+    "descriptionTitle": "Description / Notes",
+    "addDescriptionPlaceholder": "Add description or notes...",
+    "cancelButton": "Cancel",
+    "updateButton": "Update",
+    "saveButton": "Save",
+    "timeValidationError": "Invalid time format. Use HH:mm.",
+    "error": {
+      "groupConflictMembers": "Cannot add this group as it shares members with already selected groups.",
+      "participantInGroup": "This participant is already included in a selected group."
+    },
+    "info": {
+      "participantsRemovedFromGroup": "Some individual participants were removed because they are part of the selected group."
+    },
+    "untitledEvent": "Untitled"
+  },
+  "common": {
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "unnamed": "Unnamed",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "eventDetailsPopover": {
+    "descriptionTitle": "Description",
+    "durationMinutes": "{{minutes}}min",
+    "durationHours": "{{hours}}h",
+    "durationHoursMinutes": "{{hours}}h{{minutes}}min",
+    "participantsTitle": "Participants",
+    "noMembers": "No members",
+    "noParticipants": "No participants",
+    "organizerLabel": "Organizer"
+  },
+  "calendarToolbar": {
+    "today": "Today",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month"
+  },
+  
+  "shareView": {
+    "title": "Share Calendar",
+    "description": "Share the calendar individually with each actor via email.",
+    "searchPlaceholder": "Search for an actor...",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "shareWithSelected": "Share with Selected",
+    "shareButton": "Share",
+    "sending": "Sending...",
+    "noActors": "No actors found",
+    "noActorsDescription": "Add actors to be able to share the calendar with them.",
+    "noEmailWarning": "Missing email",
+    "noteTitle": "Important",
+    "noteDescription": "Make sure all actors have a valid email address to receive their calendar.",
+    "errorNoEmail": "{{name}} doesn't have an email address. Please add one before sharing.",
+    "errorMultipleNoEmail": "{{count}} actor(s) don't have an email address: {{names}}. You can add emails or send only to actors who have one.",
+    "andOthers": "{{names}} and {{count}} others",
+    "errorNoSelection": "Please select at least one actor.",
+    "sendAnyway": "Send Anyway",
+    "successSingle": "Calendar successfully sent to {{name}}.",
+    "successMultiple": "Calendar successfully sent to {{count}} actors."
+  },
+  
+  "profile": {
+    "title": "My Profile",
+    "edit": "Edit",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "phone": "Phone",
+    "logout": "Logout",
+    "logoutConfirmTitle": "Confirm Logout",
+    "logoutConfirmMessage": "Are you sure you want to log out?",
+    "confirmLogout": "Yes, log me out",
+    "tabs": {
+      "personal": "Personal Information",
+      "security": "Security",
+      "preferences": "Preferences",
+      "notifications": "Notifications"
+    },
+    "security": {
+      "changePassword": "Change Password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm Password"
+    },
+    "preferences": {
+      "language": "Language",
+      "selectLanguage": "Select Language",
+      "french": "French",
+      "english": "English"
+    },
+    "notifications": {
+      "settings": "Notification Settings",
+      "email": "Email Notifications",
+      "emailDescription": "Receive email notifications for important events",
+      "browser": "Browser Notifications",
+      "browserDescription": "Receive browser notifications for important events"
+    }
+  },
+  
+  "auth": {
+    "register": {
+      "title": "Create an Account",
+      "userTypeQuestion": "You are:",
+      "companyButton": "A company",
+      "individualButton": "An individual",
+      "backButton": "Back",
+      "alreadyRegistered": "Already registered?",
+      "loginLink": "Log in"
+    },
+    "companyForm": {
+      "title": "Company Registration",
+      "companyInfo": "Company Information",
+      "companyName": "Company Name *",
+      "industry": "Industry",
+      "email": "Business Email *",
+      "phone": "Phone *",
+      "address": "Address",
+      "addressTitle": "Address *",
+      "city": "City *",
+      "postalCode": "Postal Code *",
+      "country": "Country *",
+      "contactInfo": "Primary Contact",
+      "contactFirstName": "First Name *",
+      "contactLastName": "Last Name *",
+      "contactPosition": "Position",
+      "security": "Security",
+      "password": "Password *",
+      "confirmPassword": "Confirm Password *",
+      "registerButton": "Register",
+      "errors": {
+        "required": "This field is required",
+        "invalidEmail": "Invalid email address",
+        "invalidPhone": "Invalid phone number",
+        "invalidPostalCode": "Invalid postal code",
+        "passwordTooShort": "Password must be at least 8 characters long",
+        "passwordMismatch": "Passwords do not match"
+      }
+    },
+    "individualForm": {
+      "title": "Individual Registration",
+      "personalInfo": "Personal Information",
+      "firstName": "First Name *",
+      "lastName": "Last Name *",
+      "email": "Email *",
+      "phone": "Phone *",
+      "birthDate": "Date of Birth *",
+      "occupation": "Occupation",
+      "address": "Address",
+      "addressTitle": "Address *",
+      "city": "City *",
+      "postalCode": "Postal Code *",
+      "country": "Country *",
+      "security": "Security",
+      "password": "Password *",
+      "confirmPassword": "Confirm Password *",
+      "registerButton": "Register",
+      "errors": {
+        "required": "This field is required",
+        "invalidEmail": "Invalid email address",
+        "invalidPhone": "Invalid phone number",
+        "invalidPostalCode": "Invalid postal code",
+        "tooYoung": "You must be at least 18 years old",
+        "passwordTooShort": "Password must be at least 8 characters long",
+        "passwordMismatch": "Passwords do not match"
+      }
+    },
+    "login": {
+      "title": "Login",
+      "email": "Email",
+      "password": "Password",
+      "rememberMe": "Remember me",
+      "loginButton": "Log in",
+      "noAccount": "Don't have an account?",
+      "registerLink": "Register",
+      "forgotPassword": "Forgot password?",
+      "errors": {
+        "emailRequired": "Please enter your email",
+        "invalidEmail": "Invalid email address",
+        "passwordRequired": "Please enter your password"
+      }
+    }
+  }
+}

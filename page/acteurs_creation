@@ -1,0 +1,125 @@
+# Documentation pour la Création et Modification d'Acteurs (Humain et Lieu)
+
+## 1. Vue d'ensemble de la Fonctionnalité
+
+Cette fonctionnalité permet aux utilisateurs de créer et de modifier des acteurs de type "Humain" et "Lieu" via une interface modale.
+
+## 2. Composants Frontend Clés
+
+-   **`ActorFormModal.js`** (`frontend/src/components/actors/forms/ActorFormModal.js`):
+    -   Gère l'affichage de la modale et sélectionne le formulaire approprié (`HumanForm` ou `LocationForm`) en fonction du prop `actorType`.
+    -   Gère le titre, les animations et la fermeture de la modale.
+    -   Props : `isOpen`, `onClose`, `actorType`, `actor` (pour l'édition).
+-   **`HumanForm.js`** (`frontend/src/components/actors/forms/HumanForm.js`):
+    -   Formulaire spécifique pour les acteurs de type "Humain".
+    -   Gère l'état local du formulaire, la validation et la soumission.
+    -   Props : `actor` (pour l'édition), `onClose`.
+-   **`LocationForm.js`** (`frontend/src/components/actors/forms/LocationForm.js`):
+    -   Formulaire spécifique pour les acteurs de type "Lieu".
+    -   Gère l'état local du formulaire, la validation et la soumission.
+    -   Props : `actor` (pour l'édition), `onClose`.
+
+## 3. Types d'Acteurs Gérés
+
+-   `HUMAN`
+-   `LOCATION`
+-   Le type `OBJECT` n'est **PAS** géré actuellement et est hors périmètre pour cette documentation.
+
+## 4. Champs de Données par Type d'Acteur (Frontend)
+
+### Acteur Humain (`HumanForm.js`)
+
+-   `photo` (String - URL, optionnel)
+-   `firstName` (String, requis)
+-   `lastName` (String, requis)
+-   `role` (String, optionnel)
+-   `email` (String - format email, optionnel mais validé si fourni)
+-   `phone` (String, optionnel)
+
+### Acteur Lieu (`LocationForm.js`)
+
+-   `photo` (String - URL, optionnel)
+-   `name` (String, requis) - Nom du lieu.
+-   `address` (String - texte libre, optionnel)
+
+## 5. Logique de Données Frontend (Redux)
+
+-   L'état des formulaires est géré localement dans `HumanForm` et `LocationForm` (`useState`).
+-   Les actions Redux `addActor` et `updateActor` (de `actorsSlice.js`) sont dispatchées lors de la soumission.
+    -   Ces actions construisent un objet `actorData` incluant `type: ACTOR_TYPES.HUMAN` ou `type: ACTOR_TYPES.LOCATION`.
+    -   En mode édition, l'`id` de l'acteur est inclus.
+    -   Ces thunks Redux devront être adaptés pour effectuer de réels appels API vers le backend NestJS.
+
+## 6. Considérations pour le Backend (NestJS & MySQL)
+
+### A. Structure de la Base de Données (Table `actors` - Approche STI)
+
+Une table unique `actors` sera utilisée pour stocker les deux types d'acteurs.
+
+-   **Colonnes Communes :**
+    -   `id` (INT, Primary Key, Auto Increment)
+    -   `type` (VARCHAR(50), NOT NULL) - Valeurs : 'human', 'location'. Ce champ est crucial pour distinguer les types.
+    -   `photo_url` (VARCHAR(2048), NULL) - URL de l'image.
+    -   `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
+    -   `updated_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)
+
+-   **Colonnes Spécifiques aux Humains (seront `NULL` si `type` = 'location') :**
+    -   `first_name` (VARCHAR(255), NULL) - Rendre NOT NULL via validation applicative si type='human'.
+    -   `last_name` (VARCHAR(255), NULL) - Rendre NOT NULL via validation applicative si type='human'.
+    -   `role` (VARCHAR(255), NULL)
+    -   `email` (VARCHAR(255), NULL, potentiellement UNIQUE)
+    -   `phone` (VARCHAR(50), NULL)
+
+-   **Colonnes Spécifiques aux Lieux (seront `NULL` si `type` = 'human') :**
+    -   `location_name` (VARCHAR(255), NULL) - Nom du lieu. Rendre NOT NULL via validation applicative si type='location'.
+    -   `address` (TEXT, NULL)
+
+*(Note : Le champ `name` de `LocationForm` est mappé à `location_name` pour éviter confusion avec `first_name`/`last_name` des humains)*
+
+### B. Entités TypeORM (NestJS)
+
+-   Une entité `Actor` sera définie, mappant à la table `actors`.
+-   Utiliser des décorateurs `class-validator` dans les DTOs pour les validations d'entrée en fonction du `type`.
+
+### C. Endpoints API (NestJS)
+
+Préfixe suggéré : `/api/actors`
+
+-   **`POST /api/actors`**
+    -   **Action :** Créer un nouvel acteur (Humain ou Lieu).
+    -   **Body Attendu :** JSON `{ type: 'human'|'location', ...champs_spécifiques }`.
+    -   **Réponse :** 201 Created, avec l'acteur créé (incluant son `id` BDD).
+    -   **Validation Backend :** Champs requis selon `type`, formats (email, URL), etc.
+
+-   **`PUT /api/actors/:id`**
+    -   **Action :** Mettre à jour un acteur existant.
+    -   **Body Attendu :** JSON `{ ...champs_a_modifier }`. Le `type` ne devrait pas être modifiable.
+    -   **Réponse :** 200 OK, avec l'acteur mis à jour.
+    -   **Validation Backend :** Similaire à la création pour les champs modifiés.
+
+-   **`GET /api/actors`**
+    -   **Action :** Lister tous les acteurs.
+    -   **Query Params (optionnels) :** `?type=human`, `?type=location`, pagination, filtres par champ.
+    -   **Réponse :** 200 OK, avec une liste d'acteurs.
+
+-   **`GET /api/actors/:id`**
+    -   **Action :** Récupérer un acteur spécifique par son `id`.
+    -   **Réponse :** 200 OK (avec l'acteur) ou 404 Not Found.
+
+-   **`DELETE /api/actors/:id`**
+    -   **Action :** Supprimer un acteur.
+    -   **Réponse :** 204 No Content ou 200 OK.
+
+### D. Points de Validation et Sécurité Backend
+
+-   Valider systématiquement toutes les données entrantes (type, format, champs requis selon le type d'acteur).
+-   Assurer la cohérence des données (par exemple, un `email` unique si c'est une règle métier).
+-   Sanitizer les entrées, surtout les URLs (`photo_url`), pour prévenir les failles XSS.
+-   Gérer les erreurs proprement (codes HTTP appropriés, messages clairs).
+
+## 7. Logique de Transition Frontend -> Backend
+
+-   Les thunks Redux (`addActor`, `updateActor`) dans `actorsSlice.js` devront être modifiés pour :
+    -   Ne plus manipuler directement l'état avec des données générées localement (comme un `id` temporaire).
+    -   Effectuer des appels `fetch` ou `axios` vers les endpoints NestJS correspondants.
+    -   Mettre à jour l'état Redux en fonction de la réponse du backend (par exemple, ajouter l'acteur retourné par l'API POST, qui contiendra l'ID réel de la base de données).

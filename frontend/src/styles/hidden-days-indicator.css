@@ -1,0 +1,44 @@
+/* Styles pour l'indicateur de jours cachés */
+.day-gap-indicator {
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  cursor: help;
+  pointer-events: auto;
+}
+
+.day-gap-indicator::before {
+  content: "";
+  height: 60%;
+  border-left: 4px dotted #6b7280;
+}
+
+.day-gap-indicator:hover::before {
+  border-left: 4px dotted #4b5563;
+}
+
+/* Style pour l'info-bulle au survol */
+.day-gap-indicator:hover::after {
+  content: attr(title);
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(55, 65, 81, 0.95);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  z-index: 10000;
+  pointer-events: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Style pour s'assurer que le conteneur du calendrier peut positionner correctement les indicateurs */
+.calendar-container {
+  position: relative;
+  overflow: visible !important;
+}

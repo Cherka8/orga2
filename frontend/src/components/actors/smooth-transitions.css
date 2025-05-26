@@ -1,0 +1,48 @@
+/* Transitions fluides pour l'interface */
+
+/* Transitions de base pour tous les éléments interactifs */
+button, a, input, select, textarea {
+  transition: all 0.2s ease;
+}
+
+/* Effet de survol pour les boutons */
+button:hover {
+  transform: translateY(-1px);
+}
+
+/* Effet de pression pour les boutons */
+button:active {
+  transform: translateY(1px);
+}
+
+/* Transition douce pour les cartes d'acteurs */
+.actor-card {
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.actor-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation d'apparition pour les modals */
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-modal-appear {
+  animation: appear 0.3s ease-out forwards;
+}
+
+/* Transition douce pour le changement d'onglet */
+.tab-content {
+  transition: opacity 0.15s ease-in-out;
+}

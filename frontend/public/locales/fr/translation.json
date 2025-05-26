@@ -1,0 +1,465 @@
+{
+  "actorsToolbar": {
+    "human": "Acteur",
+    "location": "Lieu",
+    "title": "Gestion des Acteurs",
+    "addHuman": "Ajouter Acteur",
+    "addLocation": "Ajouter Lieu",
+    "addGroup": "Ajouter Groupe",
+    "tabs": {
+      "allActors": "Tous",
+      "groups": "Groupes",
+      "time": "Temps",
+      "events": "Événements",
+      "share": "Partager"
+    },
+    "filters": {
+      "all": "Tous",
+      "humans": "Acteurs",
+      "locations": "Lieux"
+    },
+    "searchPlaceholder": "Rechercher des acteurs"
+  },
+  "groupsTab": {
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce groupe ?",
+    "listTitle": "Groupes",
+    "addGroupButton": "Ajouter Groupe",
+    "noGroupSelectedTitle": "Aucun groupe sélectionné",
+    "noGroupSelectedDescription": "Sélectionnez un groupe dans la liste ou créez-en un nouveau",
+    "modalTitleEdit": "Modifier le Groupe",
+    "modalTitleAdd": "Ajouter un Nouveau Groupe"
+  },
+  "groupsList": {
+    "emptyMessage": "Aucun groupe pour le moment. Créez votre premier groupe !",
+    "member_one": "membre",
+    "member_other": "membres",
+    "ariaLabelEdit": "Modifier le groupe",
+    "ariaLabelDelete": "Supprimer le groupe",
+    "noGroupsYet": "Aucun groupe pour le moment. Créez votre premier groupe !"
+  },
+  "groupForm": {
+    "labelName": "Nom du groupe *",
+    "errorNameRequired": "Le nom du groupe est requis",
+    "labelDescription": "Description",
+    "labelPhoto": "Photo",
+    "placeholderPhotoUrl": "https://exemple.com/photo.jpg",
+    "altPreview": "Aperçu",
+    "altInvalidUrl": "URL Invalide",
+    "buttonCancel": "Annuler",
+    "buttonUpdate": "Mettre à jour",
+    "buttonCreate": "Créer"
+  },
+  "groupMembers": {
+    "ariaLabelRemoveMember": "Retirer {{actorName}} du groupe",
+    "membersSectionTitle": "Membres du groupe",
+    "membersCount_one": "{{count}} membre",
+    "membersCount_other": "{{count}} membres",
+    "emptyMembersDroppable": "Glissez des acteurs ici depuis la liste de droite pour les ajouter.",
+    "availableSectionTitle": "Acteurs disponibles",
+    "availableCount_one": "{{count}} acteur",
+    "availableCount_other": "{{count}} acteurs",
+    "filterPlaceholder": "Filtrer les acteurs",
+    "emptyAvailableDroppable": "Aucun acteur disponible trouvé",
+    "ariaLabelAddMember": "Ajouter {{actorName}} au groupe"
+  },
+  "sidebar": {
+    "config": {
+      "languageLabel": "Langue",
+      "visibleDays": "Jours visibles",
+      "languageFrench": "Français",
+      "languageEnglish": "Anglais"
+    },
+    "calendar": "Calendrier",
+    "allActorsLink": "Liste des Acteurs",
+    "actors": "Acteurs",
+    "groupsLink": "Groupes",
+    "views": "Affichage",
+    "timeLink": "Temps",
+    "eventsLink": "Événements",
+    "shareLink": "Partager",
+    "configuration": "Configuration"
+  },
+  "viewsPanel": {
+    "focusBackButton": "Retour",
+    "focusBackTooltip": "Retour à la vue complète",
+    "focusIndicator": "Mode focus actif",
+    "colorsSectionTitle": "Couleurs",
+    "fallbackActorName": "Acteur",
+    "fallbackGroupName": "Groupe",
+    "searchActorPlaceholder": "Rechercher des acteurs..."
+  },
+  "viewsSection": {
+    "noItemsAvailable": "Aucun élément disponible"
+  },
+  "viewItem": {
+    "share": "Partager",
+    "shareCopied": "Lien copié !",
+    "shareError": "Erreur copie",
+    "fallbackName": "Sans nom",
+    "hideTooltip": "Masquer",
+    "showTooltip": "Afficher"
+  },
+  "daySelector": {
+    "fiveDays": "5 jours",
+    "sevenDays": "7 jours"
+  },
+  "businessHoursSelector": {
+    "title": "Heures d'ouverture",
+    "startLabel": "Début:",
+    "endLabel": "Fin:",
+    "errorStartBeforeEnd": "L'heure de début doit être antérieure à l'heure de fin",
+    "errorEndAfterStart": "L'heure de fin doit être postérieure à l'heure de début"
+  },
+  "colors": {
+    "indigo": "Indigo",
+    "rouge": "Rouge",
+    "orange": "Orange",
+    "ambre": "Ambre",
+    "emeraude": "Émeraude",
+    "cyan": "Cyan",
+    "bleu": "Bleu",
+    "violet": "Violet",
+    "rose": "Rose",
+    "indigo-clair": "Indigo Clair",
+    "turquoise": "Turquoise",
+    "citron-vert": "Citron Vert",
+    "pourpre": "Pourpre",
+    "noir": "Noir",
+    "gris-ardoise": "Gris Ardoise"
+  },
+  "humanForm": {
+    "photoUrlLabel": "URL de la photo",
+    "firstNameLabel": "Prénom *",
+    "lastNameLabel": "Nom *",
+    "roleLabel": "Rôle",
+    "emailLabel": "Email",
+    "phoneLabel": "Numéro de téléphone",
+    "photoUrlPlaceholder": "https://exemple.com/photo.jpg",
+    "firstNamePlaceholder": "Jean",
+    "lastNamePlaceholder": "Dupont",
+    "rolePlaceholder": "Chef de projet",
+    "emailPlaceholder": "jean.dupont@exemple.com",
+    "phonePlaceholder": "+33 6 12 34 56 78",
+    "photoPlaceholderText": "Pas de photo",
+    "cancelButton": "Annuler",
+    "createButton": "Créer",
+    "updateButton": "Mettre à jour",
+    "error": {
+      "firstNameRequired": "Le prénom est requis",
+      "lastNameRequired": "Le nom est requis",
+      "invalidEmail": "Format d'email invalide"
+    },
+    "photoAlt": "Photo de l'acteur",
+    "photoText": "Photo"
+  },
+  "locationForm": {
+    "nameLabel": "Nom du lieu *",
+    "photoUrlLabel": "URL de la photo",
+    "addressLabel": "Adresse",
+    "namePlaceholder": "Bureau Paris",
+    "photoUrlPlaceholder": "https://exemple.com/photo.jpg",
+    "addressPlaceholder": "123 Avenue des Champs-Élysées, 75008 Paris",
+    "photoPlaceholderText": "Image du lieu",
+    "photoErrorText": "URL invalide",
+    "photoAlt": "Aperçu du lieu",
+    "cancelButton": "Annuler",
+    "createButton": "Créer",
+    "updateButton": "Mettre à jour",
+    "error": {
+      "nameRequired": "Le nom du lieu est requis"
+    }
+  },
+  "actorFormModal": {
+    "title": {
+      "addHuman": "Ajouter un nouvel acteur",
+      "editHuman": "Modifier l'acteur",
+      "addLocation": "Ajouter un nouveau lieu",
+      "editLocation": "Modifier le lieu"
+    }
+  },
+  "actorTypes": {
+    "human": "Acteur",
+    "location": "Lieu"
+  },
+  "actorDetailsModal": {
+    "noImage": "Pas d'image",
+    "detailsTitle": {
+      "location": "Détails du lieu",
+      "human": "Détails de l'acteur",
+      "contactInfo": "Informations de contact",
+      "personalInfo": "Informations personnelles"
+    },
+    "fields": {
+      "name": "Nom :",
+      "address": "Adresse :",
+      "role": "Rôle :",
+      "email": "Email :",
+      "phone": "Téléphone :"
+    },
+    "closeButton": "Fermer",
+    "closeSrOnly": "Fermer"
+  },
+  "actorsList": {
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cet acteur ?",
+    "empty": {
+      "title": "Aucun acteur trouvé",
+      "description": "Créez un nouvel acteur en utilisant les boutons ci-dessus"
+    }
+  },
+  "timeView": {
+    "title": "Suivi du Temps",
+    "hoursCalculatedFromEvents": "Heures calculées selon les événements associés",
+    "hoursChartTitle": "Heures par Acteur",
+    "actor": "acteur",
+    "actorsSelected": "acteurs sélectionnés",
+    "actorSelected": "acteur sélectionné",
+    "noActorsSelectedTitle": "Aucun Acteur Sélectionné",
+    "noActorsSelectedHint": "Sélectionnez des acteurs dans la liste pour afficher leurs données horaires.",
+    "calculatingHours": "Calcul des heures...",
+    "datePicker": {
+      "startLabel": "Début",
+      "endLabel": "Fin",
+      "placeholder": "Sélectionner date"
+    }
+  },
+  "actorTimeList": {
+    "title": "Acteurs",
+    "searchPlaceholder": "Rechercher un acteur...",
+    "selectAll": "Tout sélectionner",
+    "deselectAll": "Tout désélectionner",
+    "noResultsFound": "Aucun acteur trouvé pour cette recherche.",
+    "noActorsAvailable": "Aucun acteur disponible.",
+    "selectedCount_one": "{{count}} acteur sélectionné",
+    "selectedCount_other": "{{count}} acteurs sélectionnés"
+  },
+  "actorHoursChart": {
+    "title": "Heures par Acteur",
+    "datasetLabel": "Heures Travaillées",
+    "tooltipSuffix": "heures",
+    "yAxisSuffix": "h",
+    "duration": {
+      "hourSuffix": "h",
+      "minuteSuffix": "m"
+    }
+  },
+  "actorEventsView": {
+    "selectActorPrompt": "Sélectionnez un acteur"
+  },
+  "selectableActorList": {
+    "title_one": "{{count}} Acteur",
+    "title_other": "{{count}} Acteurs",
+    "searchPlaceholder": "Rechercher un acteur...",
+    "noResults": "Aucun acteur trouvé",
+    "noActorsAvailable": "Aucun acteur disponible",
+    "tryAnotherSearch": "Essayez un autre terme de recherche",
+    "addActorsHint": "Ajoutez des acteurs pour les voir ici"
+  },
+  "actorEventList": {
+    "noEventsTitle": "Aucun événement",
+    "noEventsDescription": "Aucun événement à afficher pour cet acteur.",
+    "untitledEvent": "Sans titre",
+    "unspecifiedLocation": "Lieu non spécifié"
+  },
+  "eventForm": {
+    "addTitlePlaceholder": "Ajouter un titre",
+    "eventColorTooltip": "Changer la couleur de l'événement",
+    "searchActorsPlaceholder": "Rechercher des personnes, lieux ou objets...",
+    "filters": {
+      "all": "Tous",
+      "humans": "Acteurs",
+      "locations": "Lieux",
+      "groups": "Groupes"
+    },
+    "locationColumnHeader": "Lieu",
+    "noLocationSelected": "Aucun lieu sélectionné",
+    "participantsColumnHeader": "Participants",
+    "presenterTooltip": {
+      "mark": "Marquer comme présentateur",
+      "remove": "Retirer comme présentateur"
+    },
+    "noParticipantsSelected": "Aucun participant sélectionné",
+    "descriptionTitle": "Description / Notes",
+    "addDescriptionPlaceholder": "Ajouter une description ou des notes...",
+    "cancelButton": "Annuler",
+    "updateButton": "Mettre à jour",
+    "saveButton": "Enregistrer",
+    "timeValidationError": "Format d'heure invalide. Utilisez HH:mm.",
+    "error": {
+      "groupConflictMembers": "Impossible d'ajouter ce groupe car il partage des membres avec des groupes déjà sélectionnés.",
+      "participantInGroup": "Ce participant est déjà inclus dans un groupe sélectionné."
+    },
+    "info": {
+      "participantsRemovedFromGroup": "Certains participants individuels ont été retirés car ils font partie du groupe sélectionné."
+    },
+    "untitledEvent": "Sans titre"
+  },
+  "common": {
+    "showMore": "Voir plus",
+    "showLess": "Réduire",
+    "unnamed": "Sans nom",
+    "back": "Retour",
+    "save": "Enregistrer",
+    "cancel": "Annuler"
+  },
+  "eventDetailsPopover": {
+    "descriptionTitle": "Description",
+    "durationMinutes": "{{minutes}}min",
+    "durationHours": "{{hours}}h",
+    "durationHoursMinutes": "{{hours}}h{{minutes}}min",
+    "participantsTitle": "Participants",
+    "noMembers": "Aucun membre",
+    "noParticipants": "Aucun participant",
+    "organizerLabel": "Organisateur"
+  },
+  "calendarToolbar": {
+    "today": "Aujourd'hui",
+    "day": "Jour",
+    "week": "Semaine",
+    "month": "Mois"
+  },
+  
+  "shareView": {
+    "title": "Partager le Calendrier",
+    "description": "Partagez le calendrier individuellement avec chaque acteur par email.",
+    "searchPlaceholder": "Rechercher un acteur...",
+    "selectAll": "Tout sélectionner",
+    "deselectAll": "Tout désélectionner",
+    "shareWithSelected": "Partager avec les sélectionnés",
+    "shareButton": "Partager",
+    "sending": "Envoi en cours...",
+    "noActors": "Aucun acteur trouvé",
+    "noActorsDescription": "Ajoutez des acteurs pour pouvoir partager le calendrier avec eux.",
+    "noEmailWarning": "Email manquant",
+    "noteTitle": "Important",
+    "noteDescription": "Assurez-vous que tous les acteurs ont une adresse email valide pour recevoir leur calendrier.",
+    "errorNoEmail": "{{name}} n'a pas d'adresse email. Veuillez en ajouter une avant de partager.",
+    "errorMultipleNoEmail": "{{count}} acteur(s) n'ont pas d'adresse email : {{names}}. Vous pouvez ajouter des emails ou envoyer uniquement aux acteurs qui en ont.",
+    "andOthers": "{{names}} et {{count}} autres",
+    "errorNoSelection": "Veuillez sélectionner au moins un acteur.",
+    "sendAnyway": "Envoyer quand même",
+    "successSingle": "Calendrier envoyé avec succès à {{name}}.",
+    "successMultiple": "Calendrier envoyé avec succès à {{count}} acteurs."
+  },
+  
+  "profile": {
+    "title": "Mon Profil",
+    "edit": "Modifier",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "Email",
+    "phone": "Téléphone",
+    "logout": "Déconnexion",
+    "logoutConfirmTitle": "Confirmer la déconnexion",
+    "logoutConfirmMessage": "Êtes-vous sûr de vouloir vous déconnecter ?",
+    "confirmLogout": "Oui, me déconnecter",
+    "tabs": {
+      "personal": "Informations personnelles",
+      "security": "Sécurité",
+      "preferences": "Préférences",
+      "notifications": "Notifications"
+    },
+    "security": {
+      "changePassword": "Changer de mot de passe",
+      "currentPassword": "Mot de passe actuel",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le mot de passe"
+    },
+    "preferences": {
+      "language": "Langue",
+      "selectLanguage": "Sélectionner la langue",
+      "french": "Français",
+      "english": "Anglais"
+    },
+    "notifications": {
+      "settings": "Paramètres de notification",
+      "email": "Notifications par email",
+      "emailDescription": "Recevoir des notifications par email pour les événements importants",
+      "browser": "Notifications navigateur",
+      "browserDescription": "Recevoir des notifications dans le navigateur pour les événements importants"
+    }
+  },
+  
+  "auth": {
+    "register": {
+      "title": "Créer un compte",
+      "userTypeQuestion": "Vous êtes :",
+      "companyButton": "Une entreprise",
+      "individualButton": "Un particulier",
+      "backButton": "Retour",
+      "alreadyRegistered": "Déjà inscrit ?",
+      "loginLink": "Se connecter"
+    },
+    "companyForm": {
+      "title": "Inscription Entreprise",
+      "companyInfo": "Informations de l'entreprise",
+      "companyName": "Nom de l'entreprise *",
+      "industry": "Secteur d'activité",
+      "email": "Email professionnel *",
+      "phone": "Téléphone *",
+      "address": "Adresse",
+      "addressTitle": "Adresse *",
+      "city": "Ville *",
+      "postalCode": "Code postal *",
+      "country": "Pays *",
+      "contactInfo": "Contact principal",
+      "contactFirstName": "Prénom *",
+      "contactLastName": "Nom *",
+      "contactPosition": "Fonction",
+      "security": "Sécurité",
+      "password": "Mot de passe *",
+      "confirmPassword": "Confirmer le mot de passe *",
+      "registerButton": "S'inscrire",
+      "errors": {
+        "required": "Ce champ est requis",
+        "invalidEmail": "Adresse email invalide",
+        "invalidPhone": "Numéro de téléphone invalide",
+        "invalidPostalCode": "Code postal invalide",
+        "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+        "passwordMismatch": "Les mots de passe ne correspondent pas"
+      }
+    },
+    "individualForm": {
+      "title": "Inscription Particulier",
+      "personalInfo": "Informations personnelles",
+      "firstName": "Prénom *",
+      "lastName": "Nom *",
+      "email": "Email *",
+      "phone": "Téléphone",
+      "birthDate": "Date de naissance *",
+      "occupation": "Profession",
+      "address": "Adresse",
+      "addressTitle": "Adresse",
+      "city": "Ville",
+      "postalCode": "Code postal",
+      "country": "Pays *",
+      "security": "Sécurité",
+      "password": "Mot de passe *",
+      "confirmPassword": "Confirmer le mot de passe *",
+      "registerButton": "S'inscrire",
+      "errors": {
+        "required": "Ce champ est requis",
+        "invalidEmail": "Adresse email invalide",
+        "invalidPhone": "Numéro de téléphone invalide",
+        "invalidPostalCode": "Code postal invalide",
+        "tooYoung": "Vous devez avoir au moins 18 ans",
+        "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+        "passwordMismatch": "Les mots de passe ne correspondent pas"
+      }
+    },
+    "login": {
+      "title": "Connexion",
+      "email": "Email",
+      "password": "Mot de passe",
+      "rememberMe": "Se souvenir de moi",
+      "loginButton": "Se connecter",
+      "noAccount": "Pas encore de compte ?",
+      "registerLink": "S'inscrire",
+      "forgotPassword": "Mot de passe oublié ?",
+      "errors": {
+        "emailRequired": "Veuillez entrer votre email",
+        "invalidEmail": "Adresse email invalide",
+        "passwordRequired": "Veuillez entrer votre mot de passe"
+      }
+    }
+  }
+}
