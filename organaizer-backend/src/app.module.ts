@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config'; // Importer ConfigModule
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -10,9 +11,21 @@ import { EventParticipant } from './event-participant/entities/event-participant
 import { Group } from './group/entities/group.entity';
 import { GroupMember } from './group-member/entities/group-member.entity';
 import { SharedCalendarAccessToken } from './shared-calendar-access-token/entities/shared-calendar-access-token.entity';
+import { ActorModule } from './actor/actor.module';
+import { AuthModule } from './auth/auth.module';
+import { CompanyModule } from './company/company.module';
+import { EventModule } from './event/event.module';
+import { EventParticipantModule } from './event-participant/event-participant.module';
+import { GroupModule } from './group/group.module';
+import { GroupMemberModule } from './group-member/group-member.module';
+import { SharedCalendarAccessTokenModule } from './shared-calendar-access-token/shared-calendar-access-token.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ // Configurer ConfigModule
+      isGlobal: true, // Rend ConfigModule disponible globalement
+      envFilePath: '.env', // Spécifie le chemin du fichier .env
+    }),
     TypeOrmModule.forRoot({
       type: 'mysql', // Type de base de données
       host: 'localhost', // Votre hôte
@@ -24,6 +37,14 @@ import { SharedCalendarAccessToken } from './shared-calendar-access-token/entiti
       synchronize: true, // IMPORTANT: true pour le développement, false pour la production (utiliser les migrations)
       // autoLoadEntities: true, // Alternative à 'entities', peut être pratique
     }),
+    ActorModule,
+    AuthModule,
+    CompanyModule,
+    EventModule,
+    EventParticipantModule,
+    GroupModule,
+    GroupMemberModule,
+    SharedCalendarAccessTokenModule,
   ],
   controllers: [AppController],
   providers: [AppService],

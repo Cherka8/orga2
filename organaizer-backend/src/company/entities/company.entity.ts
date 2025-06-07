@@ -24,6 +24,21 @@ export class Company {
   @Column({ type: 'varchar', length: 255, nullable: true })
   industry: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'company_phone' })
+  companyPhone: string;
+
+  @Column({ type: 'text', nullable: true, name: 'company_address' })
+  companyAddress: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'company_city' })
+  companyCity: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true, name: 'company_postal_code' })
+  companyPostalCode: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'company_country' })
+  companyCountry: string;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 
