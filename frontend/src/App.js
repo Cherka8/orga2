@@ -43,11 +43,14 @@ const EventDetailsPopover = lazy(() => import('./components/events/EventDetailsP
 const RegisterPage = lazy(() => import('./components/auth/RegisterPage'));
 const LoginPage = lazy(() => import('./components/auth/LoginPage'));
 const ProfilePage = lazy(() => import('./components/profile/ProfilePage'));
+const EmailVerificationPage = lazy(() => import('./pages/EmailVerificationPage'));
+const ForgotPasswordPage = lazy(() => import('./components/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./components/auth/ResetPasswordPage'));
 
 function AppContent() {
   const location = useLocation();
   // Déterminer si nous sommes sur une page d'authentification ou de profil
-  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+    const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'].some(path => location.pathname.startsWith(path));
   const isProfilePage = location.pathname === '/profile';
   const { i18n } = useTranslation(); // Get i18n instance
   const [currentView, setCurrentView] = useState('timeGridWeek');
@@ -1216,6 +1219,21 @@ function AppContent() {
             <Route path="/register" element={
               <Suspense fallback={<div>Loading...</div>}>
                 <RegisterPage />
+              </Suspense>
+            } />
+            <Route path="/verify-email" element={
+              <Suspense fallback={<div>Loading...</div>}>
+                <EmailVerificationPage />
+              </Suspense>
+            } />
+            <Route path="/forgot-password" element={
+              <Suspense fallback={<div>Loading...</div>}>
+                <ForgotPasswordPage />
+              </Suspense>
+            } />
+            <Route path="/reset-password" element={
+              <Suspense fallback={<div>Loading...</div>}>
+                <ResetPasswordPage />
               </Suspense>
             } />
             <Route path="/profile" element={

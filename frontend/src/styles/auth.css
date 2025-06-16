@@ -1,5 +1,26 @@
 /* Styles pour les pages d'authentification */
 
+.form-message {
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.95em;
+  border: 1px solid transparent;
+}
+
+.form-message.success {
+  background-color: #e6f7f0; /* Vert clair */
+  color: #006400; /* Vert foncé */
+  border-color: #a3e0b7;
+}
+
+.form-message.error {
+  background-color: #fdecea; /* Rouge clair */
+  color: #a80000; /* Rouge foncé */
+  border-color: #f9c0c0;
+}
+
 .register-container {
   display: flex;
   justify-content: center;

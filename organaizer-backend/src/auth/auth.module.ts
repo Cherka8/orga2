@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config'; // Importer ConfigModule et ConfigService
@@ -32,6 +34,24 @@ import { JwtStrategy } from './jwt.strategy'; // Importer JwtStrategy
       inject: [ConfigService], // Injecter ConfigService
     }),
     TypeOrmModule.forFeature([Account, Company]),
+    MailerModule.forRoot({
+      transport: {
+        host: '127.0.0.1', // Forcer l'IPv4 pour éviter les problèmes de résolution avec localhost
+        port: 1025, // Port SMTP de MailHog
+        secure: false, // MailHog n'utilise pas SSL
+        // Pas de bloc 'auth' car MailHog ne requiert pas d'authentification
+      },
+      defaults: {
+        from: '"No Reply" <noreply@organaizer.com>',
+      },
+      template: {
+        dir: process.cwd() + '/src/templates/',
+        adapter: new HandlebarsAdapter(),
+        options: {
+          strict: true,
+        },
+      },
+    }),
   ], // Ajouter Company ici
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy], // Ajouter JwtStrategy ici

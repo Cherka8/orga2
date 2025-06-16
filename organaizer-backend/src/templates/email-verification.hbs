@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vérification de votre adresse e-mail</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      background-color: #ffffff;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 24px;
+      margin: 20px 0;
+      background-color: #007bff;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bonjour {{ name }},</h1>
+    <p>Merci de vous être inscrit sur OrganAIzer. Pour activer votre compte, veuillez vérifier votre adresse e-mail en cliquant sur le bouton ci-dessous :</p>
+    <a href="{{ url }}" class="button">Vérifier mon e-mail</a>
+    <p>Si le bouton ne fonctionne pas, copiez et collez le lien suivant dans votre navigateur :</p>
+    <p><a href="{{ url }}">{{ url }}</a></p>
+    <p>Ce lien de vérification expirera dans 24 heures.</p>
+    <p>Si vous n'avez pas créé de compte, veuillez ignorer cet e-mail.</p>
+    <div class="footer">
+      <p>L'équipe OrganAIzer</p>
+    </div>
+  </div>
+</body>
+</html>

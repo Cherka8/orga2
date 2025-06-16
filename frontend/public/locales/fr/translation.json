@@ -380,14 +380,20 @@
   },
   
   "auth": {
+    "common": {
+      "registrationSuccessMessageWithEmail": "Inscription réussie ! Un e-mail de vérification a été envoyé à votre adresse. Veuillez suivre les instructions pour activer votre compte. Pensez à vérifier votre dossier de courrier indésirable (spam)."
+    },
     "register": {
-      "title": "Créer un compte",
+      "title": "S'inscrire",
       "userTypeQuestion": "Vous êtes :",
       "companyButton": "Une entreprise",
       "individualButton": "Un particulier",
       "backButton": "Retour",
       "alreadyRegistered": "Déjà inscrit ?",
-      "loginLink": "Se connecter"
+            "loginLink": "Se connecter",
+      "successTitle": "Inscription réussie !",
+      "successMessage": "Un e-mail de vérification a été envoyé à votre adresse. Veuillez suivre les instructions pour activer votre compte.",
+      "checkSpam": "Pensez à vérifier votre dossier de courrier indésirable (spam)."
     },
     "companyForm": {
       "title": "Inscription Entreprise",
@@ -409,13 +415,16 @@
       "password": "Mot de passe *",
       "confirmPassword": "Confirmer le mot de passe *",
       "registerButton": "S'inscrire",
+      "successMessage": "Inscription de l'entreprise réussie ! Vous allez être redirigé.",
       "errors": {
         "required": "Ce champ est requis",
         "invalidEmail": "Adresse email invalide",
         "invalidPhone": "Numéro de téléphone invalide",
         "invalidPostalCode": "Code postal invalide",
         "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
-        "passwordMismatch": "Les mots de passe ne correspondent pas"
+        "passwordMismatch": "Les mots de passe ne correspondent pas",
+        "genericError": "Une erreur est survenue. Veuillez réessayer.",
+        "networkError": "Erreur réseau. Veuillez vérifier votre connexion et réessayer."
       }
     },
     "individualForm": {
@@ -446,7 +455,7 @@
         "passwordMismatch": "Les mots de passe ne correspondent pas"
       }
     },
-    "login": {
+        "login": {
       "title": "Connexion",
       "email": "Email",
       "password": "Mot de passe",
@@ -455,10 +464,60 @@
       "noAccount": "Pas encore de compte ?",
       "registerLink": "S'inscrire",
       "forgotPassword": "Mot de passe oublié ?",
+      "resending": "Envoi en cours...",
+      "resendButton": "Renvoyer l'e-mail de vérification",
       "errors": {
         "emailRequired": "Veuillez entrer votre email",
         "invalidEmail": "Adresse email invalide",
-        "passwordRequired": "Veuillez entrer votre mot de passe"
+        "passwordRequired": "Veuillez entrer votre mot de passe",
+        "genericError": "Email ou mot de passe incorrect.",
+        "networkError": "Erreur réseau. Veuillez vérifier votre connexion et réessayer.",
+        "emailRequiredForResend": "Veuillez laisser votre e-mail dans le champ ci-dessus pour le renvoi.",
+        "resendFailed": "L'envoi de l'e-mail de vérification a échoué. Veuillez réessayer."
+      }
+    },
+    "verification": {
+      "noToken": "Aucun jeton de vérification fourni.",
+      "success": "Votre e-mail a été vérifié avec succès !",
+      "genericError": "Une erreur est survenue lors de la vérification.",
+      "networkError": "Erreur de réseau. Veuillez réessayer.",
+      "verifyingTitle": "Vérification en cours...",
+      "verifyingMessage": "Nous vérifions vos informations.",
+      "successTitle": "Vérification réussie !",
+      "errorTitle": "Erreur de vérification",
+      "loginLink": "Aller à la page de connexion",
+      "backToLogin": "Retour à la connexion"
+    },
+    "forgotPassword": {
+      "title": "Mot de passe oublié",
+      "subtitle": "Entrez votre adresse e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe.",
+      "email": "Adresse e-mail",
+      "emailPlaceholder": "votre.email@exemple.com",
+      "sendButton": "Envoyer le lien de réinitialisation",
+      "sending": "Envoi en cours...",
+      "backToLogin": "Retour à la connexion",
+      "errors": {
+        "emailRequired": "L'adresse e-mail est requise.",
+        "genericError": "Une erreur est survenue. Veuillez réessayer."
+      }
+    },
+    "resetPassword": {
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Veuillez entrer votre nouveau mot de passe ci-dessous.",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "saveButton": "Enregistrer le nouveau mot de passe",
+      "saving": "Enregistrement...",
+      "errors": {
+        "noToken": "Jeton de réinitialisation invalide ou manquant.",
+        "passwordRequired": "Le mot de passe est requis.",
+        "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères.",
+        "passwordsMismatch": "Les mots de passe ne correspondent pas.",
+        "genericError": "Une erreur est survenue. Le jeton est peut-être invalide ou a expiré."
+      },
+      "success": {
+        "title": "Mot de passe réinitialisé !",
+        "loginButton": "Se connecter"
       }
     }
   }

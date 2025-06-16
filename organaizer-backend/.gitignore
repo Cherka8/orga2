@@ -54,3 +54,6 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+JWT_SECRET=TaSuperCleSecreteUniqueEtComplexePourOrganaizerApp123!@#**
+JWT_EXPIRES_IN=3600s

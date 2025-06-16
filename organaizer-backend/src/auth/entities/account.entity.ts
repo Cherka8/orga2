@@ -67,13 +67,25 @@ export class Account {
   contactPosition: string;
 
   @Column({ type: 'json', nullable: true, name: 'view_preferences' })
-  viewPreferences: any; // Ou un type plus spécifique si vous le définissez
+  viewPreferences: any;
 
   @Column({ type: 'boolean', default: true, nullable: false, name: 'is_active' })
   isActive: boolean;
 
   @Column({ type: 'timestamp', nullable: true, name: 'email_verified_at' })
   emailVerifiedAt: Date;
+
+  @Column({ type: 'varchar', length: 255, nullable: true, unique: true })
+  emailVerificationToken: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  emailVerificationTokenExpires: Date | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true, unique: true, name: 'reset_password_token' })
+  resetPasswordToken: string | null;
+
+  @Column({ type: 'timestamp', nullable: true, name: 'reset_password_token_expires' })
+  resetPasswordTokenExpires: Date | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

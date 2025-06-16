@@ -1,13 +1,34 @@
-import { Injectable, InternalServerErrorException, HttpException, HttpStatus, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, HttpException, HttpStatus, UnauthorizedException, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt'; // Importer JwtService
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
+import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto';
 import { Account, AccountType } from './entities/account.entity';
 import { RegisterIndividualDto } from './dto/register-individual.dto';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import { LoginDto } from './dto/login.dto'; // Importer LoginDto
-import { Company } from '../company/entities/company.entity'; // Nous créerons ce DTO bientôt
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { Company } from '../company/entities/company.entity';
+
+// Define a type for the user details to be returned
+export interface UserDetails {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  accountType: AccountType;
+  // Add other fields if necessary, e.g., roles, specific profile info
+}
+
+// Define a type for the registration response
+export interface RegistrationResponse {
+  message: string;
+} // Nous créerons ce DTO bientôt
 
 @Injectable()
 export class AuthService {
@@ -17,27 +38,97 @@ export class AuthService {
     @InjectRepository(Company) // Injecter CompanyRepository
     private companyRepository: Repository<Company>,
     private jwtService: JwtService, // Injecter JwtService
+    private configService: ConfigService, // Injecter ConfigService
+    private readonly mailerService: MailerService,
   ) {}
 
-  async registerIndividual(registerIndividualDto: RegisterIndividualDto): Promise<Account> {
-    const { email, password, firstName, lastName, country, phone, address, city, postalCode, birthDate, occupation } = registerIndividualDto;
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
+    const { email } = forgotPasswordDto;
+    const account = await this.accountRepository.findOne({ where: { email } });
 
-    // Vérifier si l'utilisateur existe déjà
-    const existingAccount = await this.accountRepository.findOne({ where: { email } });
-    if (existingAccount) {
-      throw new ConflictException('Un compte avec cet email existe déjà.');
-    }
-
-    // Hacher le mot de passe
-    const saltRounds = 10;
-    let hashedPassword;
-    try {
-      hashedPassword = await bcrypt.hash(password, saltRounds);
-    } catch (error) {
-      throw new InternalServerErrorException('Erreur lors du hachage du mot de passe.');
+    if (account && account.isActive) {
+      try {
+        account.resetPasswordToken = uuidv4();
+        account.resetPasswordTokenExpires = new Date(Date.now() + 15 * 60 * 1000); 
+        await this.accountRepository.save(account);
+        await this.sendPasswordResetEmail(account);
+      } catch (error) {
+        console.error('Erreur lors de la génération du token de réinitialisation:', error);
+      }
     }
     
-    // Créer une nouvelle instance de compte
+    return { message: 'Si votre adresse e-mail est enregistrée chez nous, vous recevrez un lien pour réinitialiser votre mot de passe.' };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+    const { token, password, confirmPassword } = resetPasswordDto;
+
+    if (password !== confirmPassword) {
+      throw new HttpException('Les mots de passe ne correspondent pas.', HttpStatus.BAD_REQUEST); //Utilisation de HttpException
+    }
+
+    const account = await this.accountRepository.findOne({ 
+      where: { 
+        resetPasswordToken: token,
+      } 
+    });
+
+    if (!account) {
+      throw new HttpException('Token de réinitialisation invalide ou expiré.', HttpStatus.BAD_REQUEST);
+    }
+    
+    if (!account.resetPasswordTokenExpires || account.resetPasswordTokenExpires < new Date()) {
+        throw new HttpException('Token de réinitialisation invalide ou expiré.', HttpStatus.BAD_REQUEST);
+    }
+
+    account.passwordHash = await bcrypt.hash(password, 10);
+    account.resetPasswordToken = null;
+    account.resetPasswordTokenExpires = null;
+
+    try {
+      await this.accountRepository.save(account);
+    } catch (error) {
+      console.error('Erreur lors de la réinitialisation du mot de passe:', error);
+      throw new InternalServerErrorException('Erreur lors de la mise à jour du mot de passe.');
+    }
+
+    return { message: 'Votre mot de passe a été réinitialisé avec succès.' };
+  }
+
+  private async sendPasswordResetEmail(account: Account) {
+    const { email, firstName, resetPasswordToken } = account;
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+    const url = `${frontendUrl}/reset-password?token=${resetPasswordToken}`;
+
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Réinitialisation de votre mot de passe OrganAIzer',
+        template: './password-reset',
+        context: {
+          name: firstName,
+          url,
+        },
+      });
+      console.log(`E-mail de réinitialisation envoyé à ${email} avec le token ${resetPasswordToken}`);
+    } catch (error) {
+      console.error('Échec de l\'envoi de l\'e-mail de réinitialisation de mot de passe', error);
+    }
+  }
+
+    async registerIndividual(registerIndividualDto: RegisterIndividualDto): Promise<RegistrationResponse> {
+    const { email, password, firstName, lastName, country, phone, address, city, postalCode, birthDate, occupation } = registerIndividualDto;
+
+    const existingAccount = await this.accountRepository.findOne({ where: { email } });
+    if (existingAccount) {
+      throw new ConflictException('Un utilisateur avec cet email existe déjà.');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const emailVerificationToken = uuidv4();
+    const emailVerificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
     const account = this.accountRepository.create({
       email,
       passwordHash: hashedPassword,
@@ -51,97 +142,175 @@ export class AuthService {
       postalCode,
       birthDate,
       occupation,
-      isActive: true, // Activer le compte par défaut
+      isActive: false, // Le compte est inactif jusqu'à la vérification de l'e-mail
+      emailVerificationToken,
+      emailVerificationTokenExpires,
     });
 
-    // Sauvegarder le compte en base de données
     try {
-      await this.accountRepository.save(account);
+      const savedAccount = await this.accountRepository.save(account);
+      console.log('[REGISTER INDIVIDUAL] Token généré pour', savedAccount.email, ':', savedAccount.emailVerificationToken);
+      await this.sendVerificationEmail(savedAccount);
     } catch (error) {
-      // Gérer les erreurs potentielles de base de données (ex: contraintes uniques non gérées plus tôt)
-      if (error.code === 'ER_DUP_ENTRY') { // Code d'erreur spécifique à MySQL pour entrée dupliquée
-        throw new ConflictException('Un compte avec cet email existe déjà.');
+      if (error.code === 'ER_DUP_ENTRY') {
+        throw new ConflictException('Un utilisateur avec cet email existe déjà.');
       }
       throw new InternalServerErrorException('Erreur lors de la création du compte.');
     }
 
-    // TODO: Gérer d'autres types de compte si nécessaire
-    const { passwordHash, ...result } = account;
-    return result as Account; // On peut caster en Account si on est sûr que le reste correspond
+    return {
+      message: 'Inscription réussie. Veuillez consulter votre e-mail pour vérifier votre compte.',
+    };
   }
 
-  async registerCompany(registerCompanyDto: RegisterCompanyDto): Promise<Account> {
+    async registerCompany(registerCompanyDto: RegisterCompanyDto): Promise<RegistrationResponse> {
     const { companyInformation, primaryContact } = registerCompanyDto;
-    const { email, password, firstName, lastName, contactPosition } = primaryContact;
+    const { email, password, firstName, lastName, contactPosition, country } = primaryContact;
 
-    // Vérifier si l'utilisateur (contact principal) existe déjà
     const existingAccount = await this.accountRepository.findOne({ where: { email } });
     if (existingAccount) {
-      throw new HttpException('Un compte avec cet email existe déjà.', HttpStatus.CONFLICT);
+      throw new ConflictException('Un utilisateur avec cet email existe déjà.');
     }
 
-    // Hacher le mot de passe
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const emailVerificationToken = uuidv4();
+    const emailVerificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 heures
 
-    // Créer l'entité Account pour le contact principal
     const newAccount = this.accountRepository.create({
       email,
       passwordHash: hashedPassword,
       firstName,
       lastName,
-      contactPosition, // Position du contact dans l'entreprise
-      accountType: AccountType.COMPANY, // Important
-      isActive: true, // Activer le compte par défaut
-      // Les champs d'adresse de l'Account peuvent être ceux du siège ou du contact, à clarifier.
-      // Pour l'instant, on les laisse vides ou on utilise ceux de l'entreprise si pertinent.
-      // country: companyInformation.companyCountry, // Exemple si on veut dupliquer
+      contactPosition,
+      accountType: AccountType.COMPANY,
+      isActive: false, // Le compte est inactif jusqu'à la vérification de l'e-mail
+      emailVerificationToken,
+      emailVerificationTokenExpires,
+      country, // En supposant que le pays provient du contact principal
     });
 
     const savedAccount = await this.accountRepository.save(newAccount);
 
-    // Créer l'entité Company
     const newCompany = this.companyRepository.create({
-      ...companyInformation, // companyName, industry, companyPhone, companyAddress, etc.
-      account: savedAccount, // Lier la compagnie au compte créé
+      ...companyInformation,
+      account: savedAccount,
     });
 
     await this.companyRepository.save(newCompany);
 
-    // Retourner l'objet Account sans le mot de passe haché
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash: _, ...accountResult } = savedAccount;
-    return accountResult as Account;
+    await this.sendVerificationEmail(savedAccount);
+
+    return {
+      message: 'Inscription réussie. Veuillez consulter votre e-mail pour vérifier votre compte.',
+    };
   }
 
-  async login(loginDto: LoginDto): Promise<{ accessToken: string }> {
-    const { email, password } = loginDto;
+    async login(loginDto: LoginDto): Promise<{ accessToken: string; user: UserDetails }> {
+    const { email, password, rememberMe } = loginDto;
 
     const account = await this.accountRepository.findOne({ where: { email } });
 
-    if (!account) {
-      throw new UnauthorizedException('Identifiants invalides.'); // Message générique
+    if (!account || !(await bcrypt.compare(password, account.passwordHash))) {
+      throw new UnauthorizedException('Email ou mot de passe incorrect.');
     }
 
-    const isPasswordMatching = await bcrypt.compare(password, account.passwordHash);
-
-    if (!isPasswordMatching) {
-      throw new UnauthorizedException('Identifiants invalides.'); // Message générique
+    if (!account.emailVerifiedAt) {
+      throw new UnauthorizedException('Veuillez vérifier votre adresse e-mail avant de vous connecter.');
     }
 
-    // Si les identifiants sont corrects, retourner le compte sans le hash du mot de passe
-    // Plus tard, nous générerons et retournerons un JWT ici.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, ...accountDetails } = account;
+    if (!account.isActive) {
+      throw new UnauthorizedException('Votre compte est inactif. Veuillez contacter le support.');
+    }
 
-    const payload = {
-      sub: accountDetails.id, // 'sub' est la convention pour l'ID de l'utilisateur (subject)
-      email: accountDetails.email,
-      // Vous pouvez ajouter d'autres données au payload si nécessaire (ex: roles)
+    const payload = { sub: account.id, email: account.email };
+    const defaultExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN');
+    const rememberMeExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN_REMEMBER_ME') || defaultExpiresIn;
+    const expiresIn = rememberMe ? rememberMeExpiresIn : defaultExpiresIn;
+    const accessToken = this.jwtService.sign(payload, { expiresIn });
+
+    const userDetails: UserDetails = {
+      id: account.id,
+      email: account.email,
+      firstName: account.firstName,
+      lastName: account.lastName,
+      accountType: account.accountType,
     };
 
     return {
-      accessToken: this.jwtService.sign(payload),
+      accessToken,
+      user: userDetails,
     };
+  }
+
+    async verifyEmail(token: string): Promise<{ message: string }> {
+    console.log('[VERIFY] Token reçu en paramètre:', token);
+    const account = await this.accountRepository.findOne({ where: { emailVerificationToken: token } });
+    console.log('[VERIFY] Résultat recherche DB pour token', token, ':', account ? 'TROUVÉ - Compte ID: ' + account.id : 'NON TROUVÉ');
+
+    if (!account) {
+      throw new NotFoundException('Le token de vérification est invalide.');
+    }
+
+    if (!account.emailVerificationTokenExpires || account.emailVerificationTokenExpires < new Date()) {
+      throw new UnauthorizedException('Le token de vérification a expiré.');
+    }
+
+    account.emailVerifiedAt = new Date();
+    account.isActive = true;
+    account.emailVerificationToken = null;
+    account.emailVerificationTokenExpires = null;
+
+    console.log('[VERIFY] Avant sauvegarde du compte ID:', account.id, 'avec emailVerifiedAt:', account.emailVerifiedAt);
+    try {
+      await this.accountRepository.save(account);
+      console.log('[VERIFY] Après sauvegarde du compte ID:', account.id, 'avec succès.');
+    } catch (dbError) {
+      console.error('[VERIFY] ERREUR lors de la sauvegarde du compte ID:', account.id, dbError);
+      throw new InternalServerErrorException('Erreur de base de données lors de la mise à jour du compte.');
+    }
+
+    return { message: 'Votre e-mail a été vérifié avec succès. Vous pouvez maintenant vous connecter.' };
+  }
+
+    async resendVerificationEmail(resendDto: ResendVerificationEmailDto): Promise<{ message: string }> {
+    const { email } = resendDto;
+    const account = await this.accountRepository.findOne({ where: { email } });
+
+    if (!account) {
+      // Ne pas révéler si l'e-mail existe ou non pour des raisons de sécurité
+      return { message: 'Si un compte avec cet e-mail existe, un nouveau lien de vérification a été envoyé.' };
+    }
+
+    if (account.emailVerifiedAt) {
+      throw new ConflictException('Cet e-mail est déjà vérifié.');
+    }
+
+    // Mettre à jour le token et l'expiration
+    account.emailVerificationToken = uuidv4();
+    account.emailVerificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 heures
+
+    await this.accountRepository.save(account);
+    await this.sendVerificationEmail(account);
+
+    return { message: 'Si un compte avec cet e-mail existe, un nouveau lien de vérification a été envoyé.' };
+  }
+
+  private async sendVerificationEmail(account: Account) {
+    const { email, firstName, emailVerificationToken } = account;
+    const url = `http://localhost:3001/verify-email?token=${emailVerificationToken}`;
+
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Bienvenue sur OrganAIzer ! Confirmez votre e-mail',
+        template: './email-verification',
+        context: {
+          name: firstName,
+          url,
+        },
+      });
+    } catch (error) {
+      console.error('Échec de l\'envoi de l\'e-mail de vérification', error);
+    }
   }
 }

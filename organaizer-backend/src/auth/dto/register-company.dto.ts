@@ -35,6 +35,16 @@ class CompanyInformationDto {
   @IsString()
   @MaxLength(100)
   companyCountry: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50) // Adjust MaxLength as needed
+  vatNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50) // Adjust MaxLength as needed
+  siretNumber?: string;
 }
 
 class PrimaryContactDetailsDto {
@@ -45,8 +55,12 @@ class PrimaryContactDetailsDto {
 
   @IsNotEmpty({ message: 'Le nom de famille du contact ne doit pas être vide.' })
   @IsString()
-  @MaxLength(255)
+  @IsNotEmpty()
   lastName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  country: string;
 
   @IsOptional()
   @IsString()

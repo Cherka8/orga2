@@ -29,19 +29,20 @@ export class RegisterIndividualDto {
   @MaxLength(50)
   phone?: string;
 
-  @IsNotEmpty({ message: 'L\'adresse ne doit pas être vide.' })
-  @IsString()
-  address: string;
+  @IsOptional()
+  @IsString({ message: 'L\'adresse doit être une chaîne de caractères.' })
+  @MaxLength(255, { message: 'L\'adresse ne doit pas dépasser 255 caractères.' })
+  address?: string;
 
-  @IsNotEmpty({ message: 'La ville ne doit pas être vide.' })
-  @IsString()
-  @MaxLength(100)
-  city: string;
+  @IsOptional()
+  @IsString({ message: 'La ville doit être une chaîne de caractères.' })
+  @MaxLength(100, { message: 'La ville ne doit pas dépasser 100 caractères.' })
+  city?: string;
 
-  @IsNotEmpty({ message: 'Le code postal ne doit pas être vide.' })
-  @IsString()
-  @MaxLength(20)
-  postalCode: string;
+  @IsOptional()
+  @IsString({ message: 'Le code postal doit être une chaîne de caractères.' })
+  @MaxLength(20, { message: 'Le code postal ne doit pas dépasser 20 caractères.' })
+  postalCode?: string;
 
   @IsNotEmpty({ message: 'La date de naissance ne doit pas être vide.' })
   @IsDateString({}, { message: 'La date de naissance doit être une date valide.' })

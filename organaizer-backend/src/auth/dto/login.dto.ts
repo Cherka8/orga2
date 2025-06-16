@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsBoolean } from 'class-validator';
 
 export class LoginDto {
   @IsNotEmpty({ message: "L'email ne doit pas être vide." })
@@ -11,4 +11,8 @@ export class LoginDto {
   // mais c'est cohérent avec le DTO d'inscription.
   @MinLength(8, { message: 'Le mot de passe doit contenir au moins 8 caractères.' })
   password: string;
+
+  @IsOptional()
+  @IsBoolean({ message: 'La valeur de rememberMe doit être un booléen.' })
+  rememberMe?: boolean;
 }

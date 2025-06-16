@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import authService from '../../services/authService';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { EnvelopeIcon, LockClosedIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
@@ -13,7 +14,10 @@ const LoginPage = () => {
     rememberMe: false
   });
   
-  const [errors, setErrors] = useState({});
+    const [errors, setErrors] = useState({});
+  const [formMessage, setFormMessage] = useState({ type: '', content: '' });
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -23,12 +27,14 @@ const LoginPage = () => {
     });
     
     // Clear error when user starts typing
-    if (errors[name]) {
+        if (errors[name]) {
       setErrors({
         ...errors,
         [name]: ''
       });
     }
+    setFormMessage({ type: '', content: '' });
+    setEmailNotVerified(false);
   };
 
   const validateForm = () => {
@@ -48,22 +54,59 @@ const LoginPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+      const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    setFormMessage({ type: '', content: '' });
+    setEmailNotVerified(false);
+
     if (validateForm()) {
-      console.log('Tentative de connexion avec:', formData.email);
-      // Ici, vous enverriez normalement les données à votre backend
-      
-      // Pour l'instant, on simule une connexion réussie
-      navigate('/');
+      try {
+        await authService.login(formData.email, formData.password, formData.rememberMe);
+        navigate('/');
+      } catch (error) {
+        if (error.response && error.response.data) {
+          const message = error.response.data.message || t('auth.login.errors.genericError');
+          if (error.response.status === 401 && message.includes('vérifié')) {
+            setEmailNotVerified(true);
+            setFormMessage({ type: 'error', content: message });
+          } else {
+            setFormMessage({ type: 'error', content: message });
+          }
+        } else {
+          setFormMessage({ type: 'error', content: t('auth.login.errors.networkError') });
+        }
+      }
+    }
+  };
+
+    const handleResendVerification = async () => {
+    if (!formData.email) {
+      setFormMessage({ type: 'error', content: t('auth.login.errors.emailRequiredForResend', 'Veuillez laisser votre e-mail dans le champ ci-dessus.') });
+      return;
+    }
+    setIsResending(true);
+    try {
+      const response = await authService.resendVerificationEmail(formData.email);
+      setFormMessage({ type: 'success', content: response.data.message });
+      setEmailNotVerified(false); // Cache le bouton après l'envoi réussi
+    } catch (error) {
+      const message = error.response?.data?.message || t('auth.login.errors.resendFailed');
+      setFormMessage({ type: 'error', content: message });
+    } finally {
+      setIsResending(false);
     }
   };
 
   return (
     <div className="register-container">
       <div className="register-card" style={{ maxWidth: '500px' }}>
-        <h1 className="register-title">{t('auth.login.title')}</h1>
+                <h1 className="register-title">{t('auth.login.title')}</h1>
+
+        {formMessage.content && (
+          <div className={`form-message ${formMessage.type}`}>
+            {formMessage.content}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
@@ -110,6 +153,14 @@ const LoginPage = () => {
             <label htmlFor="rememberMe" style={{ margin: 0 }}>{t('auth.login.rememberMe')}</label>
           </div>
           
+                    {emailNotVerified && (
+            <div className="form-actions">
+              <button type="button" onClick={handleResendVerification} disabled={isResending} className="secondary-button" style={{ width: '100%' }}>
+                {isResending ? t('auth.login.resending', 'Envoi en cours...') : t('auth.login.resendButton', 'Renvoyer l\'e-mail de vérification')}
+              </button>
+            </div>
+          )}
+
           <div className="form-actions">
             <button type="submit" className="submit-button">
               {t('auth.login.loginButton')}

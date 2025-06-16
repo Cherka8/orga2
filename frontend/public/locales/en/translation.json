@@ -389,6 +389,9 @@
   },
   
   "auth": {
+    "common": {
+      "registrationSuccessMessageWithEmail": "Registration successful! A verification email has been sent to your address. Please follow the instructions to activate your account. Remember to check your spam folder."
+    },
     "register": {
       "title": "Create an Account",
       "userTypeQuestion": "You are:",
@@ -396,7 +399,10 @@
       "individualButton": "An individual",
       "backButton": "Back",
       "alreadyRegistered": "Already registered?",
-      "loginLink": "Log in"
+      "loginLink": "Log in",
+      "successTitle": "Registration Successful!",
+      "successMessage": "A verification email has been sent to your address. Please follow the instructions to activate your account.",
+      "checkSpam": "Remember to check your spam folder."
     },
     "companyForm": {
       "title": "Company Registration",
@@ -418,13 +424,16 @@
       "password": "Password *",
       "confirmPassword": "Confirm Password *",
       "registerButton": "Register",
+      "successMessage": "Company registration successful! You will be redirected shortly.",
       "errors": {
         "required": "This field is required",
         "invalidEmail": "Invalid email address",
         "invalidPhone": "Invalid phone number",
         "invalidPostalCode": "Invalid postal code",
         "passwordTooShort": "Password must be at least 8 characters long",
-        "passwordMismatch": "Passwords do not match"
+        "passwordMismatch": "Passwords do not match",
+        "genericError": "An error occurred. Please try again.",
+        "networkError": "Network error. Please check your connection and try again."
       }
     },
     "individualForm": {
@@ -445,6 +454,7 @@
       "password": "Password *",
       "confirmPassword": "Confirm Password *",
       "registerButton": "Register",
+      "successMessage": "Registration successful! You will be redirected shortly.",
       "errors": {
         "required": "This field is required",
         "invalidEmail": "Invalid email address",
@@ -452,7 +462,9 @@
         "invalidPostalCode": "Invalid postal code",
         "tooYoung": "You must be at least 18 years old",
         "passwordTooShort": "Password must be at least 8 characters long",
-        "passwordMismatch": "Passwords do not match"
+        "passwordMismatch": "Passwords do not match",
+        "genericError": "An error occurred. Please try again.",
+        "networkError": "Network error. Please check your connection and try again."
       }
     },
     "login": {
@@ -464,10 +476,60 @@
       "noAccount": "Don't have an account?",
       "registerLink": "Register",
       "forgotPassword": "Forgot password?",
+      "resending": "Sending...",
+      "resendButton": "Resend verification email",
       "errors": {
         "emailRequired": "Please enter your email",
         "invalidEmail": "Invalid email address",
-        "passwordRequired": "Please enter your password"
+        "passwordRequired": "Please enter your password",
+        "genericError": "Incorrect email or password.",
+        "networkError": "Network error. Please check your connection and try again.",
+        "emailRequiredForResend": "Please leave your email in the field above to resend.",
+        "resendFailed": "Failed to send verification email. Please try again."
+      }
+    },
+    "verification": {
+      "noToken": "No verification token provided.",
+      "success": "Your email has been successfully verified!",
+      "genericError": "An error occurred during verification.",
+      "networkError": "Network error. Please try again.",
+      "verifyingTitle": "Verifying...",
+      "verifyingMessage": "We are verifying your information.",
+      "successTitle": "Verification Successful!",
+      "errorTitle": "Verification Error",
+      "loginLink": "Go to login page",
+      "backToLogin": "Back to Login"
+    },
+    "forgotPassword": {
+      "title": "Forgot Password",
+      "subtitle": "Enter your email address and we'll send you a link to reset your password.",
+      "email": "Email Address",
+      "emailPlaceholder": "your.email@example.com",
+      "sendButton": "Send Reset Link",
+      "sending": "Sending...",
+      "backToLogin": "Back to Login",
+      "errors": {
+        "emailRequired": "Email address is required.",
+        "genericError": "An error occurred. Please try again."
+      }
+    },
+    "resetPassword": {
+      "title": "Reset Password",
+      "subtitle": "Please enter your new password below.",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "saveButton": "Save New Password",
+      "saving": "Saving...",
+      "errors": {
+        "noToken": "Invalid or missing reset token.",
+        "passwordRequired": "Password is required.",
+        "passwordTooShort": "Password must be at least 8 characters long.",
+        "passwordsMismatch": "Passwords do not match.",
+        "genericError": "An error occurred. The token may be invalid or expired."
+      },
+      "success": {
+        "title": "Password Reset!",
+        "loginButton": "Go to Login"
       }
     }
   }
