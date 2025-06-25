@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
 import { 
   ArrowLeftIcon, 
   UserIcon, 
@@ -13,30 +14,89 @@ import {
   CameraIcon,
   PencilIcon
 } from '@heroicons/react/24/outline';
+import { selectUser, selectIsAuthenticated, logout, fetchUserProfile, updateUserProfile } from '../../redux/slices/authSlice';
 import '../../styles/profile.css';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { t, i18n } = useTranslation();
   
-  // Données utilisateur fictives (à remplacer par des données réelles plus tard)
-  const [user, setUser] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    phone: '+33 6 12 34 56 78',
+  // Redux state
+  const user = useSelector(selectUser);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  
+  // Rediriger si non connecté
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    // Récupérer le profil si pas encore chargé
+    if (!user) {
+      dispatch(fetchUserProfile());
+    }
+  }, [isAuthenticated, user, navigate, dispatch]);
+
+  // État local pour l'édition
+  const [editMode, setEditMode] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
     profilePicture: null,
-    language: i18n.language.split('-')[0], // 'fr' ou 'en'
+    language: i18n.language.split('-')[0],
     notifications: {
       email: true,
       browser: false
     }
   });
-
-  const [editMode, setEditMode] = useState(false);
-  const [formData, setFormData] = useState({...user});
   const [activeTab, setActiveTab] = useState('personal');
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
+
+  // Mettre à jour formData quand user change
+  useEffect(() => {
+    if (user) {
+      console.log('User data from Redux:', user);
+      setFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        profilePicture: user.profilePicture || null,
+        language: i18n.language.split('-')[0],
+        notifications: {
+          email: user.emailNotifications !== false,
+          browser: user.browserNotifications || false
+        }
+      });
+    }
+  }, [user, i18n.language]);
+
+  // Si pas de données utilisateur, afficher un loader
+  if (!user) {
+    return (
+      <div className="profile-container">
+        <div className="profile-header">
+          <button 
+            className="back-button" 
+            onClick={() => navigate('/')}
+            aria-label={t('common.back')}
+          >
+            <ArrowLeftIcon className="icon" width={20} height={20} />
+            <span>{t('common.back')}</span>
+          </button>
+          <h1>{t('profile.title')}</h1>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <span className="ml-2">Chargement du profil...</span>
+        </div>
+      </div>
+    );
+  }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -60,7 +120,8 @@ const ProfilePage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setUser(formData);
+    // Mettre à jour les données utilisateur dans Redux
+    dispatch(updateUserProfile(formData));
     setEditMode(false);
     
     // Si la langue a changé, l'appliquer
@@ -89,6 +150,7 @@ const ProfilePage = () => {
   const handleLogout = () => {
     // Logique de déconnexion ici
     console.log('Déconnexion...');
+    dispatch(logout());
     navigate('/login');
   };
 
@@ -198,7 +260,18 @@ const ProfilePage = () => {
                   <button 
                     className="cancel-button"
                     onClick={() => {
-                      setFormData({...user});
+                      setFormData({
+                        firstName: user.firstName || '',
+                        lastName: user.lastName || '',
+                        email: user.email || '',
+                        phone: user.phone || '',
+                        profilePicture: user.profilePicture || null,
+                        language: i18n.language.split('-')[0],
+                        notifications: {
+                          email: user.emailNotifications !== false,
+                          browser: user.browserNotifications || false
+                        }
+                      });
                       setEditMode(false);
                     }}
                   >

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3000/api/auth/';
+const API_URL = 'http://localhost:3001/api/auth/';
 
 const registerIndividual = (userData) => {
   return axios.post(API_URL + 'register/individual', userData);
@@ -51,6 +51,37 @@ const resendVerificationEmail = (email) => {
     return axios.post(API_URL + 'resend-verification-email', { email });
 };
 
+const getProfile = () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return Promise.reject(new Error('No token found'));
+  }
+  
+  return axios.get(API_URL + 'profile', {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }).then((response) => {
+    console.log('Profile data from API:', response.data);
+    return response.data;
+  });
+};
+
+const updateProfile = (profileData) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return Promise.reject(new Error('No token found'));
+  }
+  
+  return axios.put(API_URL + 'profile', profileData, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }).then((response) => {
+    return response.data;
+  });
+};
+
 const authService = {
   registerIndividual,
   registerCompany,
@@ -60,6 +91,8 @@ const authService = {
   resetPassword,
   verifyEmail,
   resendVerificationEmail,
+  getProfile,
+  updateProfile,
 };
 
 export default authService;

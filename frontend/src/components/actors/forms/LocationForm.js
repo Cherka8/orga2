@@ -7,28 +7,32 @@ const LocationForm = ({ actor, onClose }) => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
-    name: '',
+    locationName: '',
     address: '',
-    photo: ''
+    photoUrl: ''
   });
   const [errors, setErrors] = useState({});
   const [isFormReady, setIsFormReady] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
 
   useEffect(() => {
     // Si on édite un lieu existant, initialiser le formulaire avec ses données
     if (actor) {
       setFormData({
-        name: actor.name || '',
+        locationName: actor.locationName || '',
         address: actor.address || '',
-        photo: actor.photo || ''
+        photoUrl: actor.photoUrl || ''
       });
+      
+      // Initialiser la preview avec la photo existante
+      if (actor.photoUrl) {
+        setPhotoPreview(`http://localhost:3001${actor.photoUrl}`);
+      }
     }
     
-    // Ajouter une animation d'entrée en décalant légèrement l'affichage du formulaire
-    setTimeout(() => {
-      setIsFormReady(true);
-    }, 50);
+    setIsFormReady(true);
   }, [actor]);
 
   const handleChange = (e) => {
@@ -37,11 +41,6 @@ const LocationForm = ({ actor, onClose }) => {
       ...prev,
       [name]: value
     }));
-    
-    // Si c'est le champ photo, indiquer que l'image est en cours de chargement
-    if (name === 'photo' && value.trim()) {
-      setImageLoading(true);
-    }
     
     // Effacer l'erreur pour ce champ s'il est rempli
     if (value.trim() && errors[name]) {
@@ -52,11 +51,29 @@ const LocationForm = ({ actor, onClose }) => {
     }
   };
 
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPhotoFile(file);
+      
+      // Créer une preview de l'image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.name.trim()) {
-      newErrors.name = t('locationForm.error.nameRequired');
+    if (!formData.locationName.trim()) {
+      newErrors.locationName = t('locationForm.error.nameRequired');
+    }
+    
+    if (!photoFile && !formData.photoUrl) {
+      newErrors.photo = t('locationForm.error.photoRequired');
     }
     
     setErrors(newErrors);
@@ -74,6 +91,10 @@ const LocationForm = ({ actor, onClose }) => {
       ...formData,
       type: ACTOR_TYPES.LOCATION
     };
+    
+    if (photoFile) {
+      actorData.photo = photoFile;
+    }
     
     if (actor) {
       // Mise à jour d'un lieu existant
@@ -117,15 +138,15 @@ const LocationForm = ({ actor, onClose }) => {
           {/* Prévisualisation de l'image */}
           <div className="w-full">
             <div className="relative w-full h-48 rounded-lg overflow-hidden shadow-md border border-gray-200 group transition-all duration-300 hover:shadow-lg">
-              {imageLoading && formData.photo && (
+              {imageLoading && formData.photoUrl && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-80 z-10">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
               )}
               <img 
-                src={formData.photo || `https://via.placeholder.com/800x400?text=${encodeURIComponent(t('locationForm.photoPlaceholderText'))}`}
+                src={photoPreview || `https://via.placeholder.com/800x400?text=${encodeURIComponent(t('locationForm.photoPlaceholderText'))}`}
                 alt={t('locationForm.photoAlt')}
-                className={`w-full h-full object-cover transition-all duration-500 ${formData.photo ? '' : 'opacity-50'}`}
+                className={`w-full h-full object-cover transition-all duration-500 ${photoPreview ? '' : 'opacity-50'}`}
                 onLoad={() => setImageLoading(false)}
                 onError={(e) => {
                   setImageLoading(false);
@@ -134,42 +155,52 @@ const LocationForm = ({ actor, onClose }) => {
                 }}
               />
             </div>
+            <input 
+              type="file"
+              name="photo"
+              id="photo"
+              onChange={handlePhotoChange}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {errors.photo && (
+              <p className="mt-1 text-sm text-red-600 animate-pulse">{errors.photo}</p>
+            )}
           </div>
           
           {/* Informations principales */}
           <div>
             {/* Nom du lieu */}
             <div className="mb-4">
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="locationName" className="block text-sm font-medium text-gray-700">
                 {t('locationForm.nameLabel')}
               </label>
               <input
                 type="text"
-                name="name"
-                id="name"
-                value={formData.name}
+                name="locationName"
+                id="locationName"
+                value={formData.locationName}
                 onChange={handleChange}
-                className={inputClass('name')}
+                className={inputClass('locationName')}
                 placeholder={t('locationForm.namePlaceholder')}
               />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-600 animate-pulse">{errors.name}</p>
+              {errors.locationName && (
+                <p className="mt-1 text-sm text-red-600 animate-pulse">{errors.locationName}</p>
               )}
             </div>
             
-            {/* Photo URL */}
+            {/* Adresse */}
             <div>
-              <label htmlFor="photo" className="block text-sm font-medium text-gray-700">
-                {t('locationForm.photoUrlLabel')}
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                {t('locationForm.addressLabel')}
               </label>
-              <input
-                type="text"
-                name="photo"
-                id="photo"
-                value={formData.photo}
+              <textarea
+                name="address"
+                id="address"
+                rows="3"
+                value={formData.address}
                 onChange={handleChange}
-                className={inputClass('photo')}
-                placeholder={t('locationForm.photoUrlPlaceholder')}
+                className={inputClass('address')}
+                placeholder={t('locationForm.addressPlaceholder')}
               />
             </div>
           </div>
@@ -177,18 +208,6 @@ const LocationForm = ({ actor, onClose }) => {
         
         {/* Adresse */}
         <div className={`${formItemClass(1)}`}>
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-            {t('locationForm.addressLabel')}
-          </label>
-          <textarea
-            name="address"
-            id="address"
-            rows="3"
-            value={formData.address}
-            onChange={handleChange}
-            className={inputClass('address')}
-            placeholder={t('locationForm.addressPlaceholder')}
-          />
         </div>
       </div>
       

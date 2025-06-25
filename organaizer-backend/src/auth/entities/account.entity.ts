@@ -45,6 +45,9 @@ export class Account {
   @Column({ type: 'varchar', length: 50, nullable: true })
   phone: string;
 
+  @Column({ type: 'text', nullable: true, name: 'profile_picture' })
+  profilePicture: string;
+
   @Column({ type: 'text', nullable: true })
   address: string;
 

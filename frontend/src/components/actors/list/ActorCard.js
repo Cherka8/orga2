@@ -13,7 +13,7 @@ const ActorCard = ({ actor, onViewDetails, onEdit, onDelete }) => {
       case ACTOR_TYPES.HUMAN:
         return `${actor.firstName} ${actor.lastName}`;
       case ACTOR_TYPES.LOCATION:
-        return actor.name;
+        return actor.locationName;
       default:
         return t('actorCard.unknownActor');
     }

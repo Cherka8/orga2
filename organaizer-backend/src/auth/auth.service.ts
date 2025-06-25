@@ -22,6 +22,8 @@ export interface UserDetails {
   firstName: string;
   lastName: string;
   accountType: AccountType;
+  phone?: string;
+  profilePicture?: string;
   // Add other fields if necessary, e.g., roles, specific profile info
 }
 
@@ -297,7 +299,7 @@ export class AuthService {
 
   private async sendVerificationEmail(account: Account) {
     const { email, firstName, emailVerificationToken } = account;
-    const url = `http://localhost:3001/verify-email?token=${emailVerificationToken}`;
+    const url = `http://localhost:3001/api/auth/verify-email?token=${emailVerificationToken}`;
 
     try {
       await this.mailerService.sendMail({
@@ -311,6 +313,63 @@ export class AuthService {
       });
     } catch (error) {
       console.error('Échec de l\'envoi de l\'e-mail de vérification', error);
+    }
+  }
+
+  async getProfile(userId: number): Promise<UserDetails> {
+    const account = await this.accountRepository.findOne({ where: { id: userId } });
+    
+    if (!account) {
+      throw new NotFoundException('Utilisateur non trouvé');
+    }
+
+    console.log('Account data from database:', {
+      id: account.id,
+      email: account.email,
+      firstName: account.firstName,
+      lastName: account.lastName,
+      phone: account.phone,
+      profilePicture: account.profilePicture,
+    });
+
+    return {
+      id: account.id,
+      email: account.email,
+      firstName: account.firstName,
+      lastName: account.lastName,
+      accountType: account.accountType,
+      phone: account.phone,
+      profilePicture: account.profilePicture,
+    };
+  }
+
+  async updateProfile(userId: number, updateData: Partial<{ firstName: string; lastName: string; email: string; phone: string; profilePicture: string }>): Promise<UserDetails> {
+    const account = await this.accountRepository.findOne({ where: { id: userId } });
+    
+    if (!account) {
+      throw new NotFoundException('Utilisateur non trouvé');
+    }
+
+    // Mettre à jour les champs fournis
+    Object.assign(account, updateData);
+
+    try {
+      const updatedAccount = await this.accountRepository.save(account);
+      
+      return {
+        id: updatedAccount.id,
+        email: updatedAccount.email,
+        firstName: updatedAccount.firstName,
+        lastName: updatedAccount.lastName,
+        accountType: updatedAccount.accountType,
+        phone: updatedAccount.phone,
+        profilePicture: updatedAccount.profilePicture,
+      };
+    } catch (error) {
+      if (error.code === 'ER_DUP_ENTRY') {
+        throw new ConflictException('Un utilisateur avec cet email existe déjà.');
+      }
+      throw new InternalServerErrorException('Erreur lors de la mise à jour du profil.');
     }
   }
 }

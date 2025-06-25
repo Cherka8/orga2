@@ -43,14 +43,15 @@ const EventDetailsPopover = lazy(() => import('./components/events/EventDetailsP
 const RegisterPage = lazy(() => import('./components/auth/RegisterPage'));
 const LoginPage = lazy(() => import('./components/auth/LoginPage'));
 const ProfilePage = lazy(() => import('./components/profile/ProfilePage'));
-const EmailVerificationPage = lazy(() => import('./pages/EmailVerificationPage'));
+const EmailVerificationPage = lazy(() => import('./components/auth/EmailVerificationPage'));
 const ForgotPasswordPage = lazy(() => import('./components/auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./components/auth/ResetPasswordPage'));
+const AuthInitializer = lazy(() => import('./components/auth/AuthInitializer'));
 
 function AppContent() {
   const location = useLocation();
   // Déterminer si nous sommes sur une page d'authentification ou de profil
-    const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'].some(path => location.pathname.startsWith(path));
+    const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/email-verification'].some(path => location.pathname.startsWith(path));
   const isProfilePage = location.pathname === '/profile';
   const { i18n } = useTranslation(); // Get i18n instance
   const [currentView, setCurrentView] = useState('timeGridWeek');
@@ -1192,203 +1193,210 @@ function AppContent() {
   };
 
   return (
-    <>
-      <div className="App" style={{ display: 'flex' }}>
-        {!isAuthPage && !isProfilePage && (
-        <Sidebar 
-          width={sidebarWidth} 
-          setWidth={setSidebarWidth} 
-          isOpen={sidebarOpen} 
-          setIsOpen={setSidebarOpen} 
-        />
-      )}
-      <div style={{ 
-        flex: 1, 
-        padding: '8px', 
-        height: '100vh',
-        overflow: 'hidden',
-        width: isAuthPage ? '100%' : (sidebarOpen ? `calc(100% - ${sidebarWidth}px)` : '100%'),
-        transition: 'width 0.3s ease-in-out'
-      }}>
-        <Routes>
-            <Route path="/login" element={
-              <Suspense fallback={<div>Loading...</div>}>
-                <LoginPage />
-              </Suspense>
-            } />
-            <Route path="/register" element={
-              <Suspense fallback={<div>Loading...</div>}>
-                <RegisterPage />
-              </Suspense>
-            } />
-            <Route path="/verify-email" element={
-              <Suspense fallback={<div>Loading...</div>}>
-                <EmailVerificationPage />
-              </Suspense>
-            } />
-            <Route path="/forgot-password" element={
-              <Suspense fallback={<div>Loading...</div>}>
-                <ForgotPasswordPage />
-              </Suspense>
-            } />
-            <Route path="/reset-password" element={
-              <Suspense fallback={<div>Loading...</div>}>
-                <ResetPasswordPage />
-              </Suspense>
-            } />
-            <Route path="/profile" element={
-              <Suspense fallback={<div>Loading...</div>}>
-                <ProfilePage />
-              </Suspense>
-            } />
-            <Route path="/" element={
-              <div className="app-container">
-                <div className="calendar-header" style={{ 
-                  padding: '16px 20px', 
-                  borderBottom: '1px solid #f3f4f6',
-                  paddingLeft: sidebarOpen ? '20px' : '50px' // Ajouter plus d'espace à gauche quand la sidebar est fermée
-                }}>
-                  <CalendarToolbar 
-                    title={calendarTitle}
-                    currentView={currentView}
-                    onPrev={handlePrev}
-                    onNext={handleNext}
-                    onToday={handleToday}
-                    onViewChange={handleViewChange}
-                  />
-                </div>
-                <div style={{ 
-                  flex: '1',
-                  padding: '4px', 
-                  height: 'calc(100vh - 90px)', 
-                  overflow: 'hidden'
-                }}>
-                  <div style={{ 
-                    backgroundColor: '#f9fafb', // Gris très léger, presque blanc
-                    borderRadius: '8px',
-                    height: '100%',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+    <Suspense fallback={<div>Loading...</div>}>
+      <AuthInitializer>
+        <div className="App" style={{ display: 'flex' }}>
+          {!isAuthPage && !isProfilePage && (
+          <Sidebar 
+            width={sidebarWidth} 
+            setWidth={setSidebarWidth} 
+            isOpen={sidebarOpen} 
+            setIsOpen={setSidebarOpen} 
+          />
+        )}
+        <div style={{ 
+          flex: 1, 
+          padding: '8px', 
+          height: '100vh',
+          overflow: 'hidden',
+          width: isAuthPage ? '100%' : (sidebarOpen ? `calc(100% - ${sidebarWidth}px)` : '100%'),
+          transition: 'width 0.3s ease-in-out'
+        }}>
+          <Routes>
+              <Route path="/login" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <LoginPage />
+                </Suspense>
+              } />
+              <Route path="/register" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <RegisterPage />
+                </Suspense>
+              } />
+              <Route path="/verify-email" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <EmailVerificationPage />
+                </Suspense>
+              } />
+              <Route path="/email-verification" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <EmailVerificationPage />
+                </Suspense>
+              } />
+              <Route path="/forgot-password" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <ForgotPasswordPage />
+                </Suspense>
+              } />
+              <Route path="/reset-password" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <ResetPasswordPage />
+                </Suspense>
+              } />
+              <Route path="/profile" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <ProfilePage />
+                </Suspense>
+              } />
+              <Route path="/" element={
+                <div className="app-container">
+                  <div className="calendar-header" style={{ 
+                    padding: '16px 20px', 
+                    borderBottom: '1px solid #f3f4f6',
+                    paddingLeft: sidebarOpen ? '20px' : '50px' // Ajouter plus d'espace à gauche quand la sidebar est fermée
                   }}>
-                    <FullCalendar
-                      ref={calendarRef}
-                      plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                      initialView={currentView}
-                      headerToolbar={false}
-                      events={filterEvents(filterEventsByFocus(events, focus || null, groupsById), filters, groupsById)}
-                      dateClick={handleDateClick}
-                      eventClick={handleEventClick}
-                      eventChange={handleEventChange}
-                      eventDrop={handleEventDrop}
-                      eventResize={handleEventResize}
-                      selectable={false}
-                      editable={true}
-                      dayMaxEvents={true}
-                      allDaySlot={false}
-                      slotMinTime={slotMinTime}
-                      slotMaxTime={slotMaxTime}
-                      hiddenDays={hiddenDays}
-                      // Dynamically set the locale based on i18n language
-                      locale={i18n.language.startsWith('fr') ? frLocale : enLocale}
-                      height="100%"
-                      slotDuration="00:15:00" // Durée de 15 minutes par créneau
-                      slotLabelInterval="01:00:00" // Afficher les étiquettes d'heure toutes les heures
-                      slotLabelFormat={{
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        omitZeroMinute: true,
-                        hour12: false
-                      }}
-                      eventContent={renderEventContent}
-                      datesSet={(dateInfo) => {
-                        // Garder le code existant pour la mise à jour du titre
-                        if (calendarRef.current) {
-                          const calendarApi = calendarRef.current.getApi();
-                          if (calendarApi) {
-                            // 1. Mettre à jour le titre (existant)
-                            updateCalendarTitle(calendarApi);
-
-                            // --- DEBUT AJOUT --- 
-                            // 2. Mettre à jour les éléments visibles dans ViewsPanel
-                            const viewStartDate = calendarApi.view.activeStart;
-                            const viewEndDate = calendarApi.view.activeEnd; // Est exclusif
-                            
-                            // Filtrer les événements locaux par la plage de dates actuelle
-                            // 'events' est la state variable contenant la liste complète
-                            const eventsInView = filterEventsByDateRange(events, viewStartDate, viewEndDate);
-                            
-                            // Extraire les acteurs, groupes, couleurs uniques des événements visibles
-                            // 'groupsById' est déjà récupéré via useSelector plus haut
-                            const { 
-                              actors: visibleActorsSet, 
-                              groups: visibleGroupsSet, 
-                              colors: visibleColorsSet 
-                            } = extractItemsFromEvents(eventsInView, groupsById);
-                            
-                            // Dispatcher l'action pour mettre à jour le state de viewsSlice
-                            dispatch(updateVisibleViewItems({
-                              actors: Array.from(visibleActorsSet),
-                              groups: Array.from(visibleGroupsSet),
-                              colors: Array.from(visibleColorsSet)
-                            }));
-                            // --- FIN AJOUT ---
-                          }
-                        }
-                      }}
-                      dayHeaderContent={({ date }) => {
-                        const day = date.getDate();
-                        const weekday = date.toLocaleString(i18n.language, { weekday: 'short' }).toUpperCase();
-                        return (
-                          <div className="fc-day-header">
-                            <div className="fc-day-header-weekday">{weekday}</div>
-                            <div className="fc-day-header-day">{day}</div>
-                          </div>
-                        );
-                      }}
+                    <CalendarToolbar 
+                      title={calendarTitle}
+                      currentView={currentView}
+                      onPrev={handlePrev}
+                      onNext={handleNext}
+                      onToday={handleToday}
+                      onViewChange={handleViewChange}
                     />
                   </div>
+                  <div style={{ 
+                    flex: '1',
+                    padding: '4px', 
+                    height: 'calc(100vh - 90px)', 
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ 
+                      backgroundColor: '#f9fafb', // Gris très léger, presque blanc
+                      borderRadius: '8px',
+                      height: '100%',
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                    }}>
+                      <FullCalendar
+                        ref={calendarRef}
+                        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                        initialView={currentView}
+                        headerToolbar={false}
+                        events={filterEvents(filterEventsByFocus(events, focus || null, groupsById), filters, groupsById)}
+                        dateClick={handleDateClick}
+                        eventClick={handleEventClick}
+                        eventChange={handleEventChange}
+                        eventDrop={handleEventDrop}
+                        eventResize={handleEventResize}
+                        selectable={false}
+                        editable={true}
+                        dayMaxEvents={true}
+                        allDaySlot={false}
+                        slotMinTime={slotMinTime}
+                        slotMaxTime={slotMaxTime}
+                        hiddenDays={hiddenDays}
+                        // Dynamically set the locale based on i18n language
+                        locale={i18n.language.startsWith('fr') ? frLocale : enLocale}
+                        height="100%"
+                        slotDuration="00:15:00" // Durée de 15 minutes par créneau
+                        slotLabelInterval="01:00:00" // Afficher les étiquettes d'heure toutes les heures
+                        slotLabelFormat={{
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          omitZeroMinute: true,
+                          hour12: false
+                        }}
+                        eventContent={renderEventContent}
+                        datesSet={(dateInfo) => {
+                          // Garder le code existant pour la mise à jour du titre
+                          if (calendarRef.current) {
+                            const calendarApi = calendarRef.current.getApi();
+                            if (calendarApi) {
+                              // 1. Mettre à jour le titre (existant)
+                              updateCalendarTitle(calendarApi);
+
+                              // --- DEBUT AJOUT --- 
+                              // 2. Mettre à jour les éléments visibles dans ViewsPanel
+                              const viewStartDate = calendarApi.view.activeStart;
+                              const viewEndDate = calendarApi.view.activeEnd; // Est exclusif
+                              
+                              // Filtrer les événements locaux par la plage de dates actuelle
+                              // 'events' est la state variable contenant la liste complète
+                              const eventsInView = filterEventsByDateRange(events, viewStartDate, viewEndDate);
+                              
+                              // Extraire les acteurs, groupes, couleurs uniques des événements visibles
+                              // 'groupsById' est déjà récupéré via useSelector plus haut
+                              const { 
+                                actors: visibleActorsSet, 
+                                groups: visibleGroupsSet, 
+                                colors: visibleColorsSet 
+                              } = extractItemsFromEvents(eventsInView, groupsById);
+                              
+                              // Dispatcher l'action pour mettre à jour le state de viewsSlice
+                              dispatch(updateVisibleViewItems({
+                                actors: Array.from(visibleActorsSet),
+                                groups: Array.from(visibleGroupsSet),
+                                colors: Array.from(visibleColorsSet)
+                              }));
+                              // --- FIN AJOUT ---
+                            }
+                          }
+                        }}
+                        dayHeaderContent={({ date }) => {
+                          const day = date.getDate();
+                          const weekday = date.toLocaleString(i18n.language, { weekday: 'short' }).toUpperCase();
+                          return (
+                            <div className="fc-day-header">
+                              <div className="fc-day-header-weekday">{weekday}</div>
+                              <div className="fc-day-header-day">{day}</div>
+                            </div>
+                          );
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            } />
-            <Route path="/actors/*" element={
-              <Suspense fallback={<div>Loading...</div>}>
-                <ActorsPage />
-              </Suspense>
-            } />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              } />
+              <Route path="/actors/*" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <ActorsPage />
+                </Suspense>
+              } />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
         </div>
-      </div>
-      
-      {/* Modal for creating an event */}
-      {!isAuthPage && !isProfilePage && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <EventFormModal 
-          isOpen={isEventModalOpen}
-          onClose={handleCloseEventModal}
-          position={eventModalPosition}
-          initialDate={eventInitialDate}
-          eventRect={eventRect}
-          onSave={handleSaveEvent}
-          updateTempEvent={updateTempEvent}
-          eventToEdit={eventToEdit}
-        />
-        </Suspense>
-      )}
-      
-      {/* Popover for event details */}
-      {!isAuthPage && !isProfilePage && selectedEvent && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <EventDetailsPopover
-            event={selectedEvent}
-            isOpen={isDetailsPopoverOpen}
-            onClose={() => setIsDetailsPopoverOpen(false)}
-            position={popoverPosition}
-            onEdit={handleEditEvent}
-            onDelete={handleDeleteEvent}
+        
+        {/* Modal for creating an event */}
+        {!isAuthPage && !isProfilePage && (
+          <Suspense fallback={<div>Loading...</div>}>
+            <EventFormModal 
+            isOpen={isEventModalOpen}
+            onClose={handleCloseEventModal}
+            position={eventModalPosition}
+            initialDate={eventInitialDate}
+            eventRect={eventRect}
+            onSave={handleSaveEvent}
+            updateTempEvent={updateTempEvent}
+            eventToEdit={eventToEdit}
           />
-        </Suspense>
-      )}
-    </>
+          </Suspense>
+        )}
+        
+        {/* Popover for event details */}
+        {!isAuthPage && !isProfilePage && selectedEvent && (
+          <Suspense fallback={<div>Loading...</div>}>
+            <EventDetailsPopover
+              event={selectedEvent}
+              isOpen={isDetailsPopoverOpen}
+              onClose={() => setIsDetailsPopoverOpen(false)}
+              position={popoverPosition}
+              onEdit={handleEditEvent}
+              onDelete={handleDeleteEvent}
+            />
+          </Suspense>
+        )}
+      </AuthInitializer>
+    </Suspense>
   );
 }
 

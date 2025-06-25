@@ -1,23 +1,48 @@
-import React, { useState } from 'react';
-import authService from '../../services/authService';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
 import { EnvelopeIcon, LockClosedIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { loginUser, selectAuthLoading, selectAuthError, selectIsAuthenticated, clearError, fetchUserProfile } from '../../redux/slices/authSlice';
+import authService from '../../services/authService';
 import '../../styles/auth.css';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { t } = useTranslation();
+  
+  const loading = useSelector(selectAuthLoading);
+  const error = useSelector(selectAuthError);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: false
   });
   
-    const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({});
   const [formMessage, setFormMessage] = useState({ type: '', content: '' });
   const [emailNotVerified, setEmailNotVerified] = useState(false);
   const [isResending, setIsResending] = useState(false);
+
+  // Rediriger si déjà connecté
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Gérer les erreurs Redux
+  useEffect(() => {
+    if (error) {
+      if (error.includes('vérifié') || error.includes('verify')) {
+        setEmailNotVerified(true);
+      }
+      setFormMessage({ type: 'error', content: error });
+    }
+  }, [error]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -27,7 +52,7 @@ const LoginPage = () => {
     });
     
     // Clear error when user starts typing
-        if (errors[name]) {
+    if (errors[name]) {
       setErrors({
         ...errors,
         [name]: ''
@@ -35,6 +60,7 @@ const LoginPage = () => {
     }
     setFormMessage({ type: '', content: '' });
     setEmailNotVerified(false);
+    dispatch(clearError());
   };
 
   const validateForm = () => {
@@ -54,32 +80,31 @@ const LoginPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-      const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setFormMessage({ type: '', content: '' });
     setEmailNotVerified(false);
+    dispatch(clearError());
 
     if (validateForm()) {
       try {
-        await authService.login(formData.email, formData.password, formData.rememberMe);
-        navigate('/');
+        const result = await dispatch(loginUser({
+          email: formData.email,
+          password: formData.password,
+          rememberMe: formData.rememberMe
+        })).unwrap();
+        
+        // Récupérer le profil utilisateur après connexion réussie
+        await dispatch(fetchUserProfile());
+        
+        // Redirection sera gérée par useEffect
       } catch (error) {
-        if (error.response && error.response.data) {
-          const message = error.response.data.message || t('auth.login.errors.genericError');
-          if (error.response.status === 401 && message.includes('vérifié')) {
-            setEmailNotVerified(true);
-            setFormMessage({ type: 'error', content: message });
-          } else {
-            setFormMessage({ type: 'error', content: message });
-          }
-        } else {
-          setFormMessage({ type: 'error', content: t('auth.login.errors.networkError') });
-        }
+        // L'erreur sera gérée par useEffect via le state Redux
       }
     }
   };
 
-    const handleResendVerification = async () => {
+  const handleResendVerification = async () => {
     if (!formData.email) {
       setFormMessage({ type: 'error', content: t('auth.login.errors.emailRequiredForResend', 'Veuillez laisser votre e-mail dans le champ ci-dessus.') });
       return;
@@ -100,7 +125,7 @@ const LoginPage = () => {
   return (
     <div className="register-container">
       <div className="register-card" style={{ maxWidth: '500px' }}>
-                <h1 className="register-title">{t('auth.login.title')}</h1>
+        <h1 className="register-title">{t('auth.login.title')}</h1>
 
         {formMessage.content && (
           <div className={`form-message ${formMessage.type}`}>
@@ -153,7 +178,7 @@ const LoginPage = () => {
             <label htmlFor="rememberMe" style={{ margin: 0 }}>{t('auth.login.rememberMe')}</label>
           </div>
           
-                    {emailNotVerified && (
+          {emailNotVerified && (
             <div className="form-actions">
               <button type="button" onClick={handleResendVerification} disabled={isResending} className="secondary-button" style={{ width: '100%' }}>
                 {isResending ? t('auth.login.resending', 'Envoi en cours...') : t('auth.login.resendButton', 'Renvoyer l\'e-mail de vérification')}
@@ -162,9 +187,9 @@ const LoginPage = () => {
           )}
 
           <div className="form-actions">
-            <button type="submit" className="submit-button">
-              {t('auth.login.loginButton')}
-              <ArrowRightOnRectangleIcon className="icon" width={20} height={20} />
+            <button type="submit" className="submit-button" disabled={loading}>
+              {loading ? t('auth.login.loggingIn', 'Connexion...') : t('auth.login.loginButton')}
+              {!loading && <ArrowRightOnRectangleIcon className="icon" width={20} height={20} />}
             </button>
           </div>
         </form>

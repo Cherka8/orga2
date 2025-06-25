@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
-  selectAllGroups, 
+  fetchGroups, 
+  selectFilteredGroups, 
+  selectSelectedGroup, 
+  selectGroup, 
   addGroup, 
   updateGroup, 
-  deleteGroup,
-  selectGroup as selectGroupAction
+  deleteGroup
 } from '../../../redux/slices/groupsSlice';
 import { selectAllActors } from '../../../redux/slices/actorsSlice';
 import GroupsList from './GroupsList';
@@ -16,11 +18,9 @@ import { useTranslation } from 'react-i18next';
 const GroupsTab = () => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  const groups = useSelector(selectAllGroups);
+  const groups = useSelector(selectFilteredGroups);
   const actors = useSelector(selectAllActors);
-  const selectedGroup = useSelector(state => state.groups.selectedGroupId 
-    ? state.groups.byId[state.groups.selectedGroupId] 
-    : null);
+  const selectedGroup = useSelector(selectSelectedGroup);
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
@@ -42,7 +42,7 @@ const GroupsTab = () => {
   };
 
   const handleSelectGroup = (groupId) => {
-    dispatch(selectGroupAction(groupId));
+    dispatch(selectGroup(groupId));
   };
 
   const handleCloseForm = () => {
@@ -50,18 +50,20 @@ const GroupsTab = () => {
     setEditingGroup(null);
   };
 
-  const handleSubmitGroup = (groupData) => {
+  const handleSubmitGroup = (formData) => {
     if (editingGroup) {
-      dispatch(updateGroup({
-        ...groupData,
-        id: editingGroup.id,
-        members: editingGroup.members
-      }));
+      dispatch(updateGroup({ id: editingGroup.id, formData }));
     } else {
-      dispatch(addGroup({
-        ...groupData,
-        members: []
-      }));
+      dispatch(addGroup(formData))
+        .unwrap()
+        .then((newGroup) => {
+          console.log('Groupe créé avec succès:', newGroup);
+          // TODO: Ici, on pourrait appeler une action pour ajouter les membres
+          // en utilisant newGroup.id si nécessaire.
+        })
+        .catch((error) => {
+          console.error('Échec de la création du groupe:', error);
+        });
     }
     setIsFormOpen(false);
     setEditingGroup(null);

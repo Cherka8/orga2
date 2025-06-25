@@ -6,60 +6,74 @@ const GroupForm = ({ group, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    photo: ''
   });
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    // Si on édite un groupe existant, initialiser le formulaire avec ses données
     if (group) {
       setFormData({
         name: group.name || '',
         description: group.description || '',
-        photo: group.photo || ''
       });
+      if (group.photo) {
+        setPhotoPreview(group.photo);
+      }
+    } else {
+      // Reset form for creation
+      setFormData({ name: '', description: '' });
+      setPhotoFile(null);
+      setPhotoPreview('');
     }
   }, [group]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Effacer l'erreur pour ce champ s'il est rempli
+    setFormData(prev => ({ ...prev, [name]: value }));
+
     if (value.trim() && errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPhotoFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setPhotoPreview(previewUrl);
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
     if (!formData.name.trim()) {
       newErrors.name = t('groupForm.errorNameRequired');
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
     if (!validateForm()) {
       return;
     }
+
+    const dataToSend = new FormData();
+    dataToSend.append('name', formData.name);
+    dataToSend.append('description', formData.description);
+
+    if (photoFile) {
+      dataToSend.append('photo', photoFile);
+    }
     
-    onSubmit(formData);
+    onSubmit(dataToSend);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700">
           {t('groupForm.labelName')}
@@ -75,10 +89,10 @@ const GroupForm = ({ group, onSubmit, onCancel }) => {
           }`}
         />
         {errors.name && (
-          <p className="mt-1 text-sm text-red-600">{errors.name} {/* Error message is already translated */}</p>
+          <p className="mt-1 text-sm text-red-600">{errors.name}</p>
         )}
       </div>
-      
+
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-gray-700">
           {t('groupForm.labelDescription')}
@@ -92,38 +106,37 @@ const GroupForm = ({ group, onSubmit, onCancel }) => {
           className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
         />
       </div>
-      
+
       <div>
         <label htmlFor="photo" className="block text-sm font-medium text-gray-700">
           {t('groupForm.labelPhoto')}
         </label>
-        <input
-          type="text"
-          name="photo"
-          id="photo"
-          value={formData.photo}
-          onChange={handleChange}
-          className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-          placeholder={t('groupForm.placeholderPhotoUrl')}
-        />
-        {formData.photo && (
-          <div className="mt-4 flex justify-center">
-            <div className="relative w-40 h-40 rounded-full overflow-hidden shadow-md border border-gray-200 mx-auto">
-              <img 
-                src={formData.photo} 
-                alt={t('groupForm.altPreview')}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `https://via.placeholder.com/150?text=${t('groupForm.altInvalidUrl')}`;
-                }}
-              />
-            </div>
+        <div className="mt-2 flex items-center space-x-4">
+          {photoPreview && (
+            <img 
+              className="h-20 w-20 rounded-full object-cover"
+              src={photoPreview}
+              alt={t('groupForm.altPreview')}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = `https://via.placeholder.com/150?text=${t('groupForm.altInvalidUrl')}`;
+              }}
+            />
+          )}
+          <div className="flex-1">
+            <input
+              type="file"
+              name="photo"
+              id="photo"
+              onChange={handleFileChange}
+              accept="image/*"
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+            />
           </div>
-        )}
+        </div>
       </div>
-      
-      <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
+
+      <div className="pt-5 border-t border-gray-200 flex justify-end space-x-3">
         <button
           type="button"
           onClick={onCancel}

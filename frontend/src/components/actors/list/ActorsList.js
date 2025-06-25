@@ -10,9 +10,18 @@ const ActorsList = ({ actors, onEditActor }) => {
   const dispatch = useDispatch();
   const [selectedActor, setSelectedActor] = useState(null);
 
-  const handleDeleteActor = (actorId) => {
+  const handleDeleteActor = async (actorId) => {
     if (window.confirm(t('actorsList.deleteConfirm'))) {
-      dispatch(deleteActor(actorId));
+      try {
+        console.log('ActorsList: Deleting actor with ID:', actorId);
+        await dispatch(deleteActor(actorId)).unwrap();
+        console.log('ActorsList: Actor deleted successfully');
+        // Le rechargement automatique se fera via Redux state update
+      } catch (error) {
+        console.error('ActorsList: Error deleting actor:', error);
+        // Optionnel : afficher une notification d'erreur à l'utilisateur
+        alert(t('actorsList.deleteError', { error: error.message || error }));
+      }
     }
   };
 

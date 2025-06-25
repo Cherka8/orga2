@@ -21,7 +21,7 @@
     "searchPlaceholder": "Search actors"
   },
   "humanForm": {
-    "photoUrlLabel": "Photo URL",
+    "photoLabel": "Photo",
     "firstNameLabel": "First Name *",
     "lastNameLabel": "Last Name *",
     "roleLabel": "Role",
@@ -47,7 +47,7 @@
   },
   "locationForm": {
     "nameLabel": "Location Name *",
-    "photoUrlLabel": "Photo URL",
+    "photoLabel": "Photo",
     "addressLabel": "Address",
     "namePlaceholder": "Office Paris",
     "photoUrlPlaceholder": "https://example.com/photo.jpg",

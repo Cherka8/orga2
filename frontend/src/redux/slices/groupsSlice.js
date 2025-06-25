@@ -1,43 +1,40 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
+import * as groupService from '../../services/groupService';
+import { selectSearchFilter } from './actorsSlice';
 
 // Actions asynchrones
 export const fetchGroups = createAsyncThunk(
   'groups/fetchGroups',
   async (_, { rejectWithValue }) => {
     try {
-      // Simuler un appel API
-      return [];
+      const groups = await groupService.getGroups();
+      return groups;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
 
 export const addGroup = createAsyncThunk(
   'groups/addGroup',
-  async (group, { rejectWithValue }) => {
+  async (groupData, { rejectWithValue }) => {
     try {
-      // Simuler un appel API
-      return {
-        ...group,
-        id: Date.now().toString(),
-        members: group.members || [],
-        photo: group.photo || ''
-      };
+      const newGroup = await groupService.createGroup(groupData);
+      return newGroup;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
 
 export const updateGroup = createAsyncThunk(
   'groups/updateGroup',
-  async (group, { rejectWithValue }) => {
+  async ({ id, formData, members }, { rejectWithValue }) => {
     try {
-      // Simuler un appel API
-      return group;
+      const updatedGroup = await groupService.updateGroup(id, formData);
+      return updatedGroup;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
@@ -46,55 +43,34 @@ export const deleteGroup = createAsyncThunk(
   'groups/deleteGroup',
   async (groupId, { rejectWithValue }) => {
     try {
-      // Simuler un appel API
+      await groupService.deleteGroup(groupId);
       return groupId;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
 
 export const addActorToGroup = createAsyncThunk(
   'groups/addActorToGroup',
-  async ({ groupId, actorId }, { rejectWithValue, getState }) => {
+  async ({ groupId, actorId }, { rejectWithValue }) => {
     try {
-      const group = getState().groups.byId[groupId];
-      if (!group) {
-        throw new Error(`Group with id ${groupId} not found`);
-      }
-      
-      // Vérifier si l'acteur est déjà dans le groupe
-      if (group.members.includes(actorId)) {
-        return { groupId, members: group.members };
-      }
-      
-      // Simuler un appel API
-      return {
-        groupId,
-        members: [...group.members, actorId]
-      };
+      const data = await groupService.addActorToGroup(groupId, actorId);
+      return data; // Contient { groupId, members }
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
 
 export const removeActorFromGroup = createAsyncThunk(
   'groups/removeActorFromGroup',
-  async ({ groupId, actorId }, { rejectWithValue, getState }) => {
+  async ({ groupId, actorId }, { rejectWithValue }) => {
     try {
-      const group = getState().groups.byId[groupId];
-      if (!group) {
-        throw new Error(`Group with id ${groupId} not found`);
-      }
-      
-      // Simuler un appel API
-      return {
-        groupId,
-        members: group.members.filter(id => id !== actorId)
-      };
+      const data = await groupService.removeActorFromGroup(groupId, actorId);
+      return data; // Contient { groupId, members }
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
@@ -243,6 +219,39 @@ export const selectGroupMembers = createSelector(
     return group && group.members 
       ? group.members.map(actorId => actorsById[actorId]).filter(Boolean) 
       : [];
+  }
+);
+
+export const selectFilteredGroups = createSelector(
+  [selectAllGroups, selectSearchFilter],
+  (groups, searchFilter) => {
+    if (!searchFilter) {
+      return groups;
+    }
+
+    const searchLower = searchFilter.toLowerCase();
+
+    return groups.filter(group => {
+      if (!group) return false;
+
+      // Recherche dans le nom et la description du groupe
+      const nameMatch = group.name && group.name.toLowerCase().includes(searchLower);
+      const descriptionMatch = group.description && group.description.toLowerCase().includes(searchLower);
+
+      // Recherche sécurisée dans les noms des membres
+      let membersMatch = false;
+      if (group.members && Array.isArray(group.members)) {
+        membersMatch = group.members.some(member => {
+          if (member && member.actor) {
+            const fullName = `${member.actor.firstName || ''} ${member.actor.lastName || ''}`.trim();
+            return fullName.toLowerCase().includes(searchLower);
+          }
+          return false;
+        });
+      }
+
+      return nameMatch || descriptionMatch || membersMatch;
+    });
   }
 );
 

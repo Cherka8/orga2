@@ -4,6 +4,8 @@ import { useSelector } from 'react-redux';
 import { selectActorsByIds } from '../../../redux/slices/actorsSlice'; 
 import { useTranslation } from 'react-i18next';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace('/api', '') : 'http://localhost:3001';
+
 const GroupsList = ({ 
   groups, 
   selectedGroupId, 
@@ -34,22 +36,17 @@ const GroupsList = ({
         >
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="mr-3 flex-shrink-0 bg-indigo-100 rounded-full p-2 w-10 h-10 overflow-hidden">
-                {group.photo ? (
-                  <img 
-                    src={group.photo} 
-                    alt={group.name} 
-                    className="w-full h-full object-cover rounded-full"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = 'https://via.placeholder.com/40?text=G';
-                    }}
-                  />
-                ) : (
-                  <svg className="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                  </svg>
-                )}
+              <div className="mr-3 flex-shrink-0 w-10 h-10">
+                <img 
+                  src={group.photo ? `${API_BASE_URL}${group.photo}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(group.name.charAt(0))}&background=random&color=fff&size=40`}
+                  alt={group.name} 
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    e.target.onerror = null; // prevent infinite loops
+                    // En cas d'erreur de chargement de la photo principale, on se rabat sur l'avatar généré.
+                      e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(group.name.charAt(0))}&background=random&color=fff&size=40`;
+                  }}
+                />
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-900">{group.name}</h3>

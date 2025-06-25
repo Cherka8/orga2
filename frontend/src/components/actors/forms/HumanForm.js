@@ -12,11 +12,13 @@ const HumanForm = ({ actor, onClose }) => {
     role: '',
     email: '',
     phone: '',
-    photo: ''
+    photoUrl: ''
   });
   const [errors, setErrors] = useState({});
   const [isFormReady, setIsFormReady] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
 
   useEffect(() => {
     // Si on édite un acteur existant, initialiser le formulaire avec ses données
@@ -27,14 +29,15 @@ const HumanForm = ({ actor, onClose }) => {
         role: actor.role || '',
         email: actor.email || '',
         phone: actor.phone || '',
-        photo: actor.photo || ''
+        photoUrl: actor.photoUrl || ''
       });
+      
+      // Initialiser la preview avec la photo existante
+      if (actor.photoUrl) {
+        setPhotoPreview(`http://localhost:3001${actor.photoUrl}`);
+      }
     }
-    
-    // Ajouter une animation d'entrée en décalant légèrement l'affichage du formulaire
-    setTimeout(() => {
-      setIsFormReady(true);
-    }, 50);
+    setIsFormReady(true);
   }, [actor]);
 
   const handleChange = (e) => {
@@ -45,7 +48,7 @@ const HumanForm = ({ actor, onClose }) => {
     }));
     
     // Si c'est le champ photo, indiquer que l'image est en cours de chargement
-    if (name === 'photo' && value.trim()) {
+    if (name === 'photoUrl' && value.trim()) {
       setImageLoading(true);
     }
     
@@ -55,6 +58,15 @@ const HumanForm = ({ actor, onClose }) => {
         ...prev,
         [name]: ''
       }));
+    }
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+      setImageLoading(true);
     }
   };
 
@@ -88,6 +100,10 @@ const HumanForm = ({ actor, onClose }) => {
       ...formData,
       type: ACTOR_TYPES.HUMAN
     };
+    
+    if (photoFile) {
+      actorData.photo = photoFile;
+    }
     
     if (actor) {
       // Mise à jour d'un acteur existant
@@ -129,20 +145,20 @@ const HumanForm = ({ actor, onClose }) => {
       <div className={`flex flex-col md:flex-row gap-6 items-center ${formItemClass(0)}`}>
         <div className="w-full md:w-1/3 flex justify-center">
           <div className="relative w-40 h-40 rounded-full overflow-hidden shadow-lg border-2 border-gray-200 group transition-all duration-300 hover:shadow-xl">
-            {imageLoading && formData.photo && (
+            {imageLoading && photoPreview && (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-80 z-10">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
               </div>
             )}
             <img 
-              src={formData.photo || `https://via.placeholder.com/150?text=${encodeURIComponent(t('humanForm.photoPlaceholderText'))}`}
+              src={photoPreview || 'https://st4.depositphotos.com/6672868/22336/v/450/depositphotos_223369166-stock-illustration-user-avatar-profile-picture-icon.jpg'}
               alt={t('humanForm.photoAlt')}
-              className={`w-full h-full object-cover transition-all duration-500 ${formData.photo ? '' : 'opacity-50'}`}
+              className={`w-full h-full object-cover transition-all duration-500 ${photoPreview ? '' : 'opacity-50'}`}
               onLoad={() => setImageLoading(false)}
               onError={(e) => {
                 setImageLoading(false);
                 e.target.onerror = null;
-                e.target.src = 'https://via.placeholder.com/150?text=Invalid+URL';
+                e.target.src = 'https://st4.depositphotos.com/6672868/22336/v/450/depositphotos_223369166-stock-illustration-user-avatar-profile-picture-icon.jpg';
               }}
             />
             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 flex items-center justify-center transition-all duration-300">
@@ -156,16 +172,15 @@ const HumanForm = ({ actor, onClose }) => {
         <div className="w-full md:w-2/3">
           <div className="mb-4">
             <label htmlFor="photo" className="block text-sm font-medium text-gray-700">
-              {t('humanForm.photoUrlLabel')}
+              {t('humanForm.photoLabel')}
             </label>
             <input
-              type="text"
+              type="file"
               name="photo"
               id="photo"
-              value={formData.photo}
-              onChange={handleChange}
+              accept="image/*"
+              onChange={handlePhotoChange}
               className={inputClass('photo')}
-              placeholder={t('humanForm.photoUrlPlaceholder')}
             />
           </div>
           

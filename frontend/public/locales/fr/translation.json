@@ -128,7 +128,7 @@
     "gris-ardoise": "Gris Ardoise"
   },
   "humanForm": {
-    "photoUrlLabel": "URL de la photo",
+    "photoLabel": "Photo",
     "firstNameLabel": "Prénom *",
     "lastNameLabel": "Nom *",
     "roleLabel": "Rôle",
@@ -154,7 +154,7 @@
   },
   "locationForm": {
     "nameLabel": "Nom du lieu *",
-    "photoUrlLabel": "URL de la photo",
+    "photoLabel": "Photo",
     "addressLabel": "Adresse",
     "namePlaceholder": "Bureau Paris",
     "photoUrlPlaceholder": "https://exemple.com/photo.jpg",

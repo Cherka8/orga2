@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Get, Req, Query } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Get, Req, Query, Res, Put } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport'; // Importer AuthGuard
 import { AuthService, RegistrationResponse, UserDetails } from './auth.service'; // Import RegistrationResponse
 import { RegisterIndividualDto } from './dto/register-individual.dto';
@@ -7,10 +7,11 @@ import { LoginDto } from './dto/login.dto';
 import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 // import { Response } from 'express'; // Plus besoin pour verifyEmail
 // import { Account } from './entities/account.entity'; // Semble non utilisé ici
 
-@Controller('api/auth') // Préfixe de route pour toutes les méthodes de ce contrôleur
+@Controller('auth') // Préfixe de route pour toutes les méthodes de ce contrôleur
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -34,24 +35,23 @@ export class AuthController {
 
   @Get('profile')
   @UseGuards(AuthGuard('jwt')) // Protéger cette route avec la stratégie JWT
-  getProfile(@Req() req): { id: number; email: string } {
+  async getProfile(@Req() req): Promise<UserDetails> {
     // req.user est populé par JwtStrategy après validation du token
-    return req.user;
+    return this.authService.getProfile(req.user.id);
   }
 
   @Get('verify-email')
-  async verifyEmail(@Query('token') token: string) { // @Res() res: Response est supprimé
+  async verifyEmail(@Query('token') token: string, @Res() res) {
     console.log(`[AUTH CONTROLLER] verifyEmail - Token reçu: ${token}`);
     try {
       const result = await this.authService.verifyEmail(token);
       console.log(`[AUTH CONTROLLER] verifyEmail - Résultat du service:`, result);
-      // Retourner une réponse JSON de succès
-      // Le frontend utilisera ce message ou un statut pour savoir que c'est OK
-      return result; // Le service retourne déjà { message: '...' }
+      // Rediriger vers le frontend avec un paramètre de succès
+      return res.redirect(`http://localhost:3000/email-verification?status=success`);
     } catch (error) {
       console.error(`[AUTH CONTROLLER] verifyEmail - Erreur du service:`, error);
-      // Laisser NestJS gérer la transformation de l'exception en réponse HTTP
-      throw error;
+      // Rediriger vers le frontend avec un paramètre d'erreur
+      return res.redirect(`http://localhost:3000/email-verification?status=error&message=${encodeURIComponent(error.message)}`);
     }
   }
 
@@ -71,5 +71,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Put('profile')
+  @UseGuards(AuthGuard('jwt')) // Protéger cette route avec la stratégie JWT
+  async updateProfile(@Req() req, @Body() updateProfileDto: UpdateProfileDto): Promise<UserDetails> {
+    return this.authService.updateProfile(req.user.id, updateProfileDto);
   }
 }

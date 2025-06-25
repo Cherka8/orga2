@@ -34,7 +34,7 @@ const ActorDetailsModal = ({ actor, onClose }) => {
       case ACTOR_TYPES.HUMAN:
         return `${actor.firstName} ${actor.lastName}`;
       case ACTOR_TYPES.LOCATION:
-        return actor.name;
+        return actor.locationName;
       default:
         return t('actorCard.unknownActor');
     }
@@ -116,11 +116,11 @@ const ActorDetailsModal = ({ actor, onClose }) => {
             <div className="mt-4">
               {actor.type === ACTOR_TYPES.HUMAN && (
                 <div className="space-y-4">
-                  {actor.photo && (
+                  {actor.photoUrl && (
                     <div className="flex justify-center mb-4">
                       <div className="relative w-40 h-40 rounded-full overflow-hidden shadow-md border border-gray-200">
                         <img 
-                          src={actor.photo} 
+                          src={`http://localhost:3001${actor.photoUrl}`} 
                           alt={`${actor.firstName} ${actor.lastName}`} 
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -172,11 +172,11 @@ const ActorDetailsModal = ({ actor, onClose }) => {
               
               {actor.type === ACTOR_TYPES.LOCATION && (
                 <div className="space-y-4">
-                  {actor.photo && (
+                  {actor.photoUrl && (
                     <div className="mb-4">
                       <div className="relative w-full h-56 rounded-lg overflow-hidden shadow-md border border-gray-200">
                         <img 
-                          src={actor.photo} 
+                          src={`http://localhost:3001${actor.photoUrl}`} 
                           alt={actor.name} 
                           className="w-full h-full object-cover"
                           onError={(e) => {

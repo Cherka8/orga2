@@ -3,6 +3,7 @@ import { Link, useLocation, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectFocusActive, deactivateFocus } from '../../redux/slices/viewsSlice';
+import { selectUser, selectIsAuthenticated, fetchUserProfile, logout } from '../../redux/slices/authSlice';
 import DaySelector from './DaySelector';
 import BusinessHoursSelector from './BusinessHoursSelector';
 import ViewsPanel from '../views/ViewsPanel';
@@ -19,17 +20,33 @@ const Sidebar = ({ width, setWidth, isOpen, setIsOpen }) => {
 
   const dispatch = useDispatch();
   const focusActive = useSelector(selectFocusActive);
+  const user = useSelector(selectUser);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
 
   const location = useLocation();
   const currentPath = location.pathname;
   const searchParams = new URLSearchParams(location.search);
   const currentTab = searchParams.get('tab');
 
-  // Données utilisateur fictives (à remplacer par des données réelles plus tard)
-  const user = {
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com'
+  // Récupérer le profil utilisateur au chargement si authentifié mais pas de données utilisateur
+  useEffect(() => {
+    if (isAuthenticated && !user) {
+      dispatch(fetchUserProfile());
+    }
+  }, [dispatch, isAuthenticated, user]);
+
+  // Données utilisateur par défaut si pas connecté ou en cours de chargement
+  const defaultUser = {
+    firstName: 'Invité',
+    lastName: '',
+    email: 'Non connecté'
+  };
+
+  const currentUser = user || defaultUser;
+
+  // Fonction pour gérer la déconnexion
+  const handleLogout = () => {
+    dispatch(logout());
   };
 
   // Fonction pour basculer l'état des menus déroulants
@@ -382,20 +399,53 @@ const Sidebar = ({ width, setWidth, isOpen, setIsOpen }) => {
 
       {/* User Info */}
       <div className="mt-auto p-4 border-t border-gray-200">
-        <Link to="/profile" className="user-profile-link">
-          <div className="flex items-center cursor-pointer transition-all duration-300 p-2 rounded-lg hover:bg-gray-100">
-            <div className="w-10 h-10 rounded-full bg-indigo-500 text-white flex items-center justify-center mr-3">
-              {user.firstName.charAt(0)}
+        {isAuthenticated && user ? (
+          <Link to="/profile" className="user-profile-link">
+            <div className="flex items-center cursor-pointer transition-all duration-300 p-2 rounded-lg hover:bg-gray-100">
+              <div className="w-10 h-10 rounded-full bg-indigo-500 text-white flex items-center justify-center mr-3">
+                {user.firstName ? user.firstName.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : '?')}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900 m-0">
+                  {user.firstName && user.lastName 
+                    ? `${user.firstName} ${user.lastName}` 
+                    : (user.email ? user.email.split('@')[0] : 'Utilisateur')}
+                </p>
+                <p className="text-xs text-gray-500 m-0">{user.email || ''}</p>
+              </div>
+              <svg className="w-5 h-5 ml-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </div>
+          </Link>
+        ) : isAuthenticated ? (
+          <div className="flex items-center p-2">
+            <div className="w-10 h-10 rounded-full bg-gray-400 text-white flex items-center justify-center mr-3">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900 m-0">{`${user.firstName} ${user.lastName}`}</p>
-              <p className="text-xs text-gray-500 m-0">{user.email}</p>
+              <p className="text-sm font-medium text-gray-900 m-0">Chargement...</p>
+              <p className="text-xs text-gray-500 m-0">Récupération du profil</p>
             </div>
-            <svg className="w-5 h-5 ml-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
-            </svg>
           </div>
-        </Link>
+        ) : (
+          <Link to="/login" className="user-profile-link">
+            <div className="flex items-center cursor-pointer transition-all duration-300 p-2 rounded-lg hover:bg-gray-100">
+              <div className="w-10 h-10 rounded-full bg-gray-400 text-white flex items-center justify-center mr-3">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900 m-0">Se connecter</p>
+                <p className="text-xs text-gray-500 m-0">Accédez à votre compte</p>
+              </div>
+              <svg className="w-5 h-5 ml-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </div>
+          </Link>
+        )}
       </div>
     </div>
   );

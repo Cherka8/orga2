@@ -8,21 +8,34 @@ import groupsReducer from './slices/groupsSlice';
 import calendarSettingsReducer from './slices/calendarSettingsSlice';
 import viewsReducer from './slices/viewsSlice';
 import eventsReducer from './slices/eventsSlice';
+import authReducer from './slices/authSlice';
 
 // Configuration de la persistance
 const persistConfig = {
   key: 'organaizer',
   storage,
-  whitelist: ['actors', 'groups', 'calendarSettings', 'views'] // Seulement ces reducers seront persistés
+  whitelist: ['actors', 'groups', 'calendarSettings', 'views', 'auth'] // Seulement ces reducers seront persistés
 };
 
-const rootReducer = combineReducers({
+const appReducer = combineReducers({
   actors: actorsReducer,
   groups: groupsReducer,
   calendarSettings: calendarSettingsReducer,
   views: viewsReducer,
-  events: eventsReducer
+  events: eventsReducer,
+  auth: authReducer
 });
+
+const rootReducer = (state, action) => {
+  // Si l'action est 'auth/logout', réinitialiser tout l'état
+  if (action.type === 'auth/logout') {
+    // On ne garde que la configuration de persistance
+    storage.removeItem('persist:organaizer'); // Nettoie le localStorage
+    return appReducer(undefined, action);
+  }
+
+  return appReducer(state, action);
+};
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 

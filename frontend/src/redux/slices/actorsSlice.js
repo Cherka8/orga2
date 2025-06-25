@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
+import actorService from '../../services/actorService'; // Import the actor service
 
 // Types d'acteurs
 export const ACTOR_TYPES = {
@@ -10,27 +11,36 @@ export const ACTOR_TYPES = {
 // Actions asynchrones
 export const fetchActors = createAsyncThunk(
   'actors/fetchActors',
-  async (_, { rejectWithValue }) => {
+  async (filters = {}, { rejectWithValue }) => {
     try {
-      // Simuler un appel API
-      return [];
+      console.log('Redux fetchActors called with filters:', filters);
+      const response = await actorService.getActors(filters);
+      console.log('Redux fetchActors response:', response);
+      return response; // { data: Actor[], total: number, page: number, limit: number }
     } catch (error) {
-      return rejectWithValue(error.message);
+      console.error('Redux fetchActors error:', error);
+      const message = 
+        (error.response && error.response.data && error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return rejectWithValue(message);
     }
   }
 );
 
 export const addActor = createAsyncThunk(
   'actors/addActor',
-  async (actor, { rejectWithValue }) => {
+  async (actorData, { rejectWithValue }) => {
     try {
-      // Simuler un appel API
-      return {
-        ...actor,
-        id: Date.now().toString()
-      };
+      const response = await actorService.createActor(actorData);
+      return response.data; // The backend should return the created actor with its new ID
     } catch (error) {
-      return rejectWithValue(error.message);
+      // Handle API errors (e.g., validation errors)
+      const message = 
+        (error.response && error.response.data && error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return rejectWithValue(message);
     }
   }
 );
@@ -39,10 +49,14 @@ export const updateActor = createAsyncThunk(
   'actors/updateActor',
   async (actor, { rejectWithValue }) => {
     try {
-      // Simuler un appel API
-      return actor;
+      const response = await actorService.updateActor(actor.id, actor);
+      return response;
     } catch (error) {
-      return rejectWithValue(error.message);
+      const message = 
+        (error.response && error.response.data && error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return rejectWithValue(message);
     }
   }
 );
@@ -51,10 +65,17 @@ export const deleteActor = createAsyncThunk(
   'actors/deleteActor',
   async (actorId, { rejectWithValue }) => {
     try {
-      // Simuler un appel API
-      return actorId;
+      console.log('Redux deleteActor called with ID:', actorId);
+      const response = await actorService.deleteActor(actorId);
+      console.log('Redux deleteActor response:', response);
+      return actorId; // Retourner l'ID pour la mise à jour du state
     } catch (error) {
-      return rejectWithValue(error.message);
+      console.error('Redux deleteActor error:', error);
+      const message = 
+        (error.response && error.response.data && error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return rejectWithValue(message);
     }
   }
 );
@@ -65,6 +86,12 @@ const initialState = {
   allIds: [],
   loading: false,
   error: null,
+  pagination: {
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0
+  },
   filter: {
     type: null,
     search: ''
@@ -85,6 +112,9 @@ const actorsSlice = createSlice({
     clearFilters: (state) => {
       state.filter.type = null;
       state.filter.search = '';
+    },
+    setPage: (state, action) => {
+      state.pagination.page = action.payload;
     }
   },
   extraReducers: (builder) => {
@@ -98,8 +128,19 @@ const actorsSlice = createSlice({
         state.loading = false;
         state.byId = {};
         state.allIds = [];
+
+        // Assurer que la pagination existe (migration implicite pour redux-persist)
+        if (!state.pagination) {
+          // Assigner une COPIE pour qu'elle soit modifiable par Immer
+          state.pagination = { ...initialState.pagination };
+        }
+
+        state.pagination.total = action.payload.total;
+        state.pagination.page = action.payload.page;
+        state.pagination.limit = action.payload.limit;
+        state.pagination.totalPages = Math.ceil(action.payload.total / action.payload.limit);
         
-        action.payload.forEach(actor => {
+        action.payload.data.forEach(actor => {
           state.byId[actor.id] = actor;
           state.allIds.push(actor.id);
         });
@@ -159,10 +200,16 @@ const actorsSlice = createSlice({
 });
 
 // Selectors de base (non mémorisés)
-const getActorsById = state => state.actors.byId;
-const getActorsAllIds = state => state.actors.allIds;
-const getActorsFilter = state => state.actors.filter;
-const getActorsState = state => state.actors; // Helper selector for entities
+const getActorsById = state => state.actors?.byId || {};
+const getActorsAllIds = state => state.actors?.allIds || [];
+const getActorsFilter = state => state.actors?.filter || { type: null, search: '' };
+
+export const selectSearchFilter = createSelector(
+  [getActorsFilter],
+  (filter) => filter.search
+);
+const getActorsState = state => state.actors || {}; // Helper selector for entities
+const getActorsPagination = state => state.actors?.pagination;
 
 // Objet vide stable pour les sélecteurs
 const EMPTY_OBJECT = {};
@@ -212,11 +259,13 @@ export const selectFilteredActors = createSelector(
         if (actor.type === ACTOR_TYPES.HUMAN) {
           return (actor.firstName || '').toLowerCase().includes(searchLower) || 
                  (actor.lastName || '').toLowerCase().includes(searchLower) ||
-                 `${actor.firstName || ''} ${actor.lastName || ''}`.toLowerCase().includes(searchLower);
+                 `${actor.firstName || ''} ${actor.lastName || ''}`.toLowerCase().includes(searchLower) ||
+                 (actor.email || '').toLowerCase().includes(searchLower);
         }
-        // Pour les lieux, rechercher dans le nom
+        // Pour les lieux, rechercher dans le nom du lieu
         else if (actor.type === ACTOR_TYPES.LOCATION) {
-          return (actor.name || '').toLowerCase().includes(searchLower);
+          return (actor.locationName || '').toLowerCase().includes(searchLower) ||
+                 (actor.address || '').toLowerCase().includes(searchLower);
         }
         // Pour tout autre type d'acteur (au cas où)
         return false;
@@ -227,6 +276,26 @@ export const selectFilteredActors = createSelector(
   }
 );
 
-export const { setTypeFilter, setSearchFilter, clearFilters } = actorsSlice.actions;
+export const selectPagination = createSelector(
+  [getActorsPagination],
+  (pagination) => pagination || {
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0
+  }
+);
+
+export const selectActorsLoading = createSelector(
+  [getActorsState],
+  (actorsState) => actorsState.loading || false
+);
+
+export const selectActorsError = createSelector(
+  [getActorsState],
+  (actorsState) => actorsState.error || null
+);
+
+export const { setTypeFilter, setSearchFilter, clearFilters, setPage } = actorsSlice.actions;
 
 export default actorsSlice.reducer;

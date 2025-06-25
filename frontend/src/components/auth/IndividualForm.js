@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
 import { UserIcon, EnvelopeIcon, PhoneIcon, MapPinIcon, HomeIcon, CalendarIcon, BriefcaseIcon, LockClosedIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { registerIndividual, selectAuthLoading, selectAuthError, selectRegistrationSuccess, clearError, clearRegistrationSuccess } from '../../redux/slices/authSlice';
 
 const IndividualForm = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const authLoading = useSelector(selectAuthLoading);
+  const authError = useSelector(selectAuthError);
+  const registrationSuccess = useSelector(selectRegistrationSuccess);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -25,7 +30,18 @@ const IndividualForm = () => {
   
   const [errors, setErrors] = useState({});
   const [formMessage, setFormMessage] = useState({ type: '', content: '' });
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+
+  useEffect(() => {
+    if (authError) {
+      setFormMessage({ type: 'error', content: authError });
+    }
+  }, [authError]);
+
+  useEffect(() => {
+    if (registrationSuccess) {
+      setFormMessage({ type: 'success', content: t('auth.register.successMessage') });
+    }
+  }, [registrationSuccess, t]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,6 +51,8 @@ const IndividualForm = () => {
     });
     
     setFormMessage({ type: '', content: '' });
+    dispatch(clearError());
+    dispatch(clearRegistrationSuccess());
     if (errors[name]) {
       setErrors({
         ...errors,
@@ -95,20 +113,7 @@ const IndividualForm = () => {
       setFormMessage({ type: '', content: '' });
       const { confirmPassword, accountType, ...payload } = formData;
 
-      try {
-        await axios.post('http://localhost:3000/api/auth/register/individual', payload);
-        setRegistrationSuccess(true);
-      } catch (error) {
-        console.error('Erreur lors de l\'inscription:', error);
-        if (error.response && error.response.data) {
-          const message = Array.isArray(error.response.data.message) 
-                          ? error.response.data.message.join(', ') 
-                          : error.response.data.message;
-          setFormMessage({ type: 'error', content: message || t('auth.individualForm.errors.genericError') });
-        } else {
-          setFormMessage({ type: 'error', content: t('auth.individualForm.errors.networkError') });
-        }
-      }
+      dispatch(registerIndividual(payload));
     }
   };
 
@@ -235,9 +240,9 @@ const IndividualForm = () => {
           </div>
           
           <div className="form-actions">
-            <button type="submit" className="submit-button">
-              {t('auth.individualForm.registerButton')}
-              <CheckIcon className="icon" width={20} height={20} />
+            <button type="submit" className="submit-button" disabled={authLoading}>
+              {authLoading ? t('auth.register.registering', 'Inscription...') : t('auth.individualForm.registerButton')}
+              {!authLoading && <CheckIcon className="icon" width={20} height={20} />}
             </button>
           </div>
         </form>
