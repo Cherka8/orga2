@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { useSelector, useDispatch } from 'react-redux'; // Assurer que useDispatch est importé
 import { store } from './redux/store';
 import { selectAllFilters } from './redux/slices/viewsSlice';
-import { setEvents as setEventsInStore } from './redux/slices/eventsSlice';
+import { setEvents as setEventsInStore, createEvent, fetchEvents, selectEvents } from './redux/slices/eventsSlice';
 import { useTranslation } from 'react-i18next'; // Import useTranslation
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -56,7 +56,8 @@ function AppContent() {
   const { i18n } = useTranslation(); // Get i18n instance
   const [currentView, setCurrentView] = useState('timeGridWeek');
   const calendarRef = useRef(null);
-  const [events, setLocalEvents] = useState([]);
+  const dispatch = useDispatch();
+  const eventsFromStore = useSelector(selectEvents);
   const [sidebarWidth, setSidebarWidth] = useState(300); // Initial width
   const [sidebarOpen, setSidebarOpen] = useState(true); // État pour la sidebar
 
@@ -101,8 +102,6 @@ function AppContent() {
   const viewFilters = useSelector(selectAllFilters);
   const focus = useSelector(state => state.views.focus);
   
-  const dispatch = useDispatch(); // <-- Obtenir la fonction dispatch
-
   // Add a useEffect to update the title when the language changes
   useEffect(() => {
     if (calendarRef.current && calendarRef.current.getApi()) {
@@ -112,8 +111,8 @@ function AppContent() {
 
   // Initialiser les filtres de vue à partir des événements
   useEffect(() => {
-    if (events.length > 0) {
-      const { actors, groups, colors } = extractViewFiltersFromEvents(events, groupsById);
+    if (eventsFromStore.length > 0) {
+      const { actors, groups, colors } = extractViewFiltersFromEvents(eventsFromStore, groupsById);
       
       // Initialiser les filtres pour les acteurs, groupes et couleurs
       dispatch(initializeFilters({ actors, groups, colors }));
@@ -128,7 +127,7 @@ function AppContent() {
       dispatch(updateAvailableGroups({ groups: [] }));
       dispatch(updateAvailableColors({ colors: [] }));
     }
-  }, [events, dispatch, groupsById]);
+  }, [eventsFromStore, dispatch, groupsById]);
 
   // Filtrer les événements en fonction des filtres actifs
 
@@ -272,28 +271,16 @@ function AppContent() {
     console.log("Event changed:", arg.event.toPlainObject());
     
     // Mettre à jour l'état local des événements
-    setLocalEvents(currentEvents => {
-      // Filtrer l'événement modifié de la liste actuelle
-      const filteredEvents = currentEvents.filter(event => event.id !== arg.event.id);
-      
-      // Créer une copie profonde de l'événement modifié
-      const updatedEvent = {
-        ...arg.event.toPlainObject(),
-        start: new Date(arg.event.start),
-        end: arg.event.end ? new Date(arg.event.end) : null
-      };
-      
-      // Ajouter l'événement modifié à la liste
-      return [...filteredEvents, updatedEvent];
-    });
-    
-    // Serialize dates before dispatching
-    const serializableEventsOnChange = events.map(event => ({
-      ...event,
-      start: event.start ? new Date(event.start).toISOString() : null,
-      end: event.end ? new Date(event.end).toISOString() : null,
-    }));
-    dispatch(setEventsInStore(serializableEventsOnChange)); // Dispatch serialized events to Redux
+    dispatch(setEventsInStore(eventsFromStore.map(event => {
+      if (event.id === arg.event.id) {
+        return {
+          ...arg.event.toPlainObject(),
+          start: new Date(arg.event.start),
+          end: arg.event.end ? new Date(arg.event.end) : null
+        };
+      }
+      return event;
+    })));
   };
 
   const handleEventDrop = (arg) => {
@@ -412,51 +399,8 @@ function AppContent() {
   };
 
   useEffect(() => {
-    // Charger les événements depuis localStorage
-    const savedEvents = loadEventsFromLocalStorage();
-    
-    // Si des événements ont été trouvés dans localStorage, les utiliser
-    if (savedEvents.length > 0) {
-      setLocalEvents(savedEvents);
-      
-      // Serialize dates before dispatching
-      const serializableEventsOnLoad = savedEvents.map(event => ({
-        ...event,
-        start: event.start ? new Date(event.start).toISOString() : null,
-        end: event.end ? new Date(event.end).toISOString() : null,
-      }));
-      dispatch(setEventsInStore(serializableEventsOnLoad)); // Dispatch serialized initial events
-      
-      // Ajouter les événements au calendrier une fois qu'il est chargé
-      const timer = requestAnimationFrame(() => {
-        if (calendarRef.current && calendarRef.current.getApi()) {
-          const calendarApi = calendarRef.current.getApi();
-          
-          // Supprimer tous les événements existants (non temporaires)
-          calendarApi.getEvents().forEach(event => {
-            if (!(event.extendedProps && event.extendedProps.isTemporary)) {
-              event.remove();
-            }
-          });
-          
-          // Ajouter les événements chargés
-          savedEvents.forEach(event => {
-            calendarApi.addEvent(event);
-          });
-          
-          console.log(`${savedEvents.length} événements chargés depuis localStorage et ajoutés au calendrier`);
-        }
-      });
-      
-      return () => cancelAnimationFrame(timer);
-    } else {
-      // Si aucun événement n'a été trouvé, synchroniser avec le calendrier comme avant
-      const timer = requestAnimationFrame(() => {
-        syncEventsWithCalendar();
-      });
-      
-      return () => cancelAnimationFrame(timer);
-    }
+    // Charger les événements depuis le backend
+    dispatch(fetchEvents());
   }, [dispatch]);
 
   useEffect(() => {
@@ -486,61 +430,7 @@ function AppContent() {
   }, [currentView]);
 
   // Fonction pour synchroniser l'état local avec les événements du calendrier
-  const syncEventsWithCalendar = () => {
-    if (calendarRef.current && calendarRef.current.getApi()) {
-      const calendarApi = calendarRef.current.getApi();
-      
-      // Charger les événements existants depuis localStorage
-      const existingEvents = loadEventsFromLocalStorage();
-      const existingEventsMap = {};
-      existingEvents.forEach(event => {
-        existingEventsMap[event.id] = true;
-      });
-      
-      // Get all non-temporary events from the calendar
-      const calendarEvents = calendarApi.getEvents()
-        .filter(event => !(event.extendedProps && event.extendedProps.isTemporary))
-        .map(event => ({
-          ...event.toPlainObject(),
-          start: new Date(event.start),
-          end: event.end ? new Date(event.end) : null
-        }));
-      
-      // Create a map of events by ID to identify duplicates
-      const eventMap = {};
-      const uniqueEvents = [];
-      
-      // D'abord ajouter les événements existants
-      existingEvents.forEach(event => {
-        if (!eventMap[event.id]) {
-          eventMap[event.id] = true;
-          uniqueEvents.push(event);
-        }
-      });
-      
-      // Ensuite ajouter les nouveaux événements du calendrier
-      calendarEvents.forEach(event => {
-        if (!eventMap[event.id]) {
-          eventMap[event.id] = true;
-          uniqueEvents.push(event);
-        }
-      });
-      
-      // Update the local state with ALL unique events
-      setLocalEvents(uniqueEvents);
-      
-      // Serialize dates before dispatching
-      const serializableEventsOnSync = uniqueEvents.map(event => ({
-        ...event,
-        start: event.start ? new Date(event.start).toISOString() : null,
-        end: event.end ? new Date(event.end).toISOString() : null,
-      }));
-      dispatch(setEventsInStore(serializableEventsOnSync)); // Synchronize serialized events with Redux store
-      
-      // Sauvegarder les événements dans localStorage
-      saveEventsToLocalStorage(uniqueEvents);
-    }
-  };
+
   
   // Function to create a visual indicator between non-consecutive days
   const dayHeaderContent = (args) => {
@@ -696,11 +586,8 @@ function AppContent() {
       
       // Force a refresh of the calendar if needed
       if (tempEventsRemoved > 1) {
-        // If we removed more than one temporary event, there might have been duplicates
-        // Force a refresh of the calendar to ensure clean state
-        requestAnimationFrame(() => {
-          syncEventsWithCalendar();
-        });
+        // If we removed more than one temporary event, there might have been duplicates.
+        // The calendar will refresh from the Redux state, so no manual sync is needed.
       }
     }
     
@@ -717,186 +604,50 @@ function AppContent() {
   // Handle saving an event
   const [isSaving, setIsSaving] = useState(false);
   const handleSaveEvent = (newEvent) => {
-    console.log("Saving event:", newEvent);
+    const isEditing = eventToEdit !== null;
+
+    // ===============================================
+    // == NOUVELLE LOGIQUE DE CRÉATION (VIA API)
+    // ===============================================
+    if (!isEditing) {
+      // S'assurer que le titre et les dates existent avant de créer l'événement
+      if (newEvent.title && newEvent.start && newEvent.end) {
+        console.log("Dispatching createEvent with:", newEvent);
+        dispatch(createEvent({
+          title: newEvent.title,
+          start: newEvent.start.toISOString(),
+          end: newEvent.end.toISOString(),
+          event_color: newEvent.event_color, // Transmettre la couleur
+        description: newEvent.description, // Transmettre la description
+        }));
+      } else {
+        console.error("Cannot create event: title, start, or end is missing.", newEvent);
+      }
+      handleCloseEventModal();
+      return; // Important: on arrête l'exécution ici pour la création
+    }
+
+    // ===============================================
+    // == ANCIENNE LOGIQUE D'ÉDITION (VIA LOCALSTORAGE)
+    // ===============================================
+    console.log("Editing existing event:", eventToEdit.id);
     
     // Protection against double submissions
     if (isSaving) return;
     setIsSaving(true);
     
-    // Check if we are modifying an existing event
-    const isEditing = eventToEdit !== null;
+    // TODO: Remplacer par la logique d'API via Redux (créer un thunk `updateEvent`)
+    console.log("Logique d'édition à implémenter via Redux");
+    // const updatedEvents = eventsFromStore.map(event => 
+    //   event.id === eventToEdit.id ? newEvent : event
+    // );
+    // saveEventsToLocalStorage(updatedEvents);
     
-    if (isEditing) {
-      console.log("Editing existing event:", eventToEdit.id);
-      
-      // Update the event in the calendar
-      if (calendarRef.current && calendarRef.current.getApi()) {
-        const calendarApi = calendarRef.current.getApi();
-        
-        // Find the event in the calendar
-        const existingEvent = calendarApi.getEventById(eventToEdit.id);
-        
-        if (existingEvent) {
-          // Update the existing event visually (optional if Redux re-render is fast enough)
-          existingEvent.setProp('title', newEvent.title);
-          existingEvent.setProp('backgroundColor', newEvent.backgroundColor);
-          existingEvent.setProp('borderColor', newEvent.borderColor);
-          existingEvent.setStart(newEvent.start);
-          existingEvent.setEnd(newEvent.end);
-          existingEvent.setExtendedProp('location', newEvent.extendedProps.location);
-          existingEvent.setExtendedProp('participants', newEvent.extendedProps.participants);
-          existingEvent.setExtendedProp('presenterId', newEvent.extendedProps.presenterId);
-          existingEvent.setExtendedProp('description', newEvent.extendedProps.description);
-          
-          // Update React state and save to localStorage based on React state
-          requestAnimationFrame(() => {
-            const eventsToSaveAfterEdit = events.map(event => 
-              event.id === eventToEdit.id ? newEvent : event
-            );
-            setLocalEvents(eventsToSaveAfterEdit);
-            
-            // Serialize dates before dispatching
-            const serializableEventsOnSave = eventsToSaveAfterEdit.map(event => ({
-              ...event,
-              start: event.start ? new Date(event.start).toISOString() : null,
-              end: event.end ? new Date(event.end).toISOString() : null,
-            }));
-            dispatch(setEventsInStore(serializableEventsOnSave)); // Dispatch serialized events to Redux
-            
-            saveEventsToLocalStorage(eventsToSaveAfterEdit);
-          });
-        } else {
-          console.error("Event to edit not found in calendar:", eventToEdit.id);
-          
-          // Fallback: update local state directly
-          const updatedEvents = events.map(event => 
-            event.id === eventToEdit.id ? newEvent : event
-          );
-          setLocalEvents(updatedEvents);
-          
-          // Serialize dates before dispatching
-          const serializableEventsOnSave = updatedEvents.map(event => ({
-            ...event,
-            start: event.start ? new Date(event.start).toISOString() : null,
-            end: event.end ? new Date(event.end).toISOString() : null,
-          }));
-          dispatch(setEventsInStore(serializableEventsOnSave)); // Dispatch serialized events to Redux
-          
-          saveEventsToLocalStorage(updatedEvents);
-        }
-      } else {
-        // Fallback if the calendar API is not available
-        const updatedEvents = events.map(event => 
-          event.id === eventToEdit.id ? newEvent : event
-        );
-        setLocalEvents(updatedEvents);
-        
-        // Serialize dates before dispatching
-        const serializableEventsOnSave = updatedEvents.map(event => ({
-          ...event,
-          start: event.start ? new Date(event.start).toISOString() : null,
-          end: event.end ? new Date(event.end).toISOString() : null,
-        }));
-        dispatch(setEventsInStore(serializableEventsOnSave)); // Dispatch serialized events to Redux
-        
-        saveEventsToLocalStorage(updatedEvents);
-      }
-    } else {
-      // Create a new event
-      const uniqueId = 'event-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-      
-      const eventWithUniqueId = {
-        ...JSON.parse(JSON.stringify(newEvent)),
-        id: uniqueId,
-        start: new Date(newEvent.start),
-        end: new Date(newEvent.end),
-        extendedProps: {
-          ...newEvent.extendedProps,
-          isTemporary: false
-        }
-      };
-      
-      console.log("Saving new event with ID:", uniqueId, eventWithUniqueId);
-      
-      if (calendarRef.current && calendarRef.current.getApi()) {
-        const calendarApi = calendarRef.current.getApi();
-        
-        // Make sure no temporary events remain
-        calendarApi.getEvents().forEach(event => {
-          // Remove all temporary events
-          if (event.extendedProps && event.extendedProps.isTemporary) {
-            console.log("Removing temporary event during save:", event.id);
-            event.remove();
-          }
-          
-          // Check for potential duplicates (events with same time and similar properties)
-          if (!event.extendedProps?.isTemporary && 
-              event.start && eventWithUniqueId.start && 
-              event.end && eventWithUniqueId.end &&
-              event.start.getTime() === new Date(eventWithUniqueId.start).getTime() && 
-              event.end.getTime() === new Date(eventWithUniqueId.end).getTime() &&
-              event.title === eventWithUniqueId.title &&
-              event.id !== eventWithUniqueId.id) {
-            console.log("Removing duplicate event during save:", event.id);
-            event.remove();
-          }
-        });
-        
-        // Add the new event
-        calendarApi.addEvent(eventWithUniqueId);
-        
-        // Update React state and save to localStorage based on React state
-        requestAnimationFrame(() => {
-          // Filter out the temp event *before* adding the new one
-          const eventsWithoutTemp = events.filter(event => event.id !== tempEventId);
-          const eventsToSaveAfterAdd = [...eventsWithoutTemp, eventWithUniqueId];
-          setLocalEvents(eventsToSaveAfterAdd);
-          
-          // Serialize dates before dispatching
-          const serializableEventsOnSave = eventsToSaveAfterAdd.map(event => ({
-            ...event,
-            start: event.start ? new Date(event.start).toISOString() : null,
-            end: event.end ? new Date(event.end).toISOString() : null,
-          }));
-          dispatch(setEventsInStore(serializableEventsOnSave)); // Dispatch serialized events to Redux
-          
-          saveEventsToLocalStorage(eventsToSaveAfterAdd);
+    // La notification à Redux et la mise à jour des filtres se feront
+    // dans le futur thunk `updateEvent`.
 
-          // Mettre à jour l'état des filtres après la sauvegarde (based on the new state)
-          const { actors, groups, colors } = extractViewFiltersFromEvents(eventsToSaveAfterAdd, groupsById);
-          dispatch(initializeFilters({ actors, groups, colors }));
-          dispatch(updateAvailableActors({ actors }));
-          dispatch(updateAvailableGroups({ groups }));
-          dispatch(updateAvailableColors({ colors }));
-        });
-      } else {
-        // Fallback if the calendar API is not available
-        const eventsToSaveAfterAdd = [...events.filter(event => event.id !== tempEventId), eventWithUniqueId]; // Ensure temp is removed here too
-        setLocalEvents(eventsToSaveAfterAdd);
-        
-        // Serialize dates before dispatching
-        const serializableEventsOnSave = eventsToSaveAfterAdd.map(event => ({
-          ...event,
-          start: event.start ? new Date(event.start).toISOString() : null,
-          end: event.end ? new Date(event.end).toISOString() : null,
-        }));
-        dispatch(setEventsInStore(serializableEventsOnSave)); // Dispatch serialized events to Redux
-        
-        saveEventsToLocalStorage(eventsToSaveAfterAdd);
-
-        // Mettre à jour l'état des filtres après la sauvegarde (based on the new state)
-        const { actors, groups, colors } = extractViewFiltersFromEvents(eventsToSaveAfterAdd, groupsById);
-        dispatch(initializeFilters({ actors, groups, colors }));
-        dispatch(updateAvailableActors({ actors }));
-        dispatch(updateAvailableGroups({ groups }));
-        dispatch(updateAvailableColors({ colors }));
-      }
-    }
-    
-    // Close the modal and reset the state
+    // Fermer la modale et réinitialiser l'état
     handleCloseEventModal();
-    
-    // Reset the saving flag after a short delay
     requestAnimationFrame(() => {
       setIsSaving(false);
     });
@@ -1031,23 +782,17 @@ function AppContent() {
         
         console.log(`Événement ${event.id} supprimé du calendrier et de localStorage`);
         
-        // Synchronize with local state
-        syncEventsWithCalendar();
+        // La synchronisation de l'état se fera via le futur thunk `deleteEvent`.
       } else {
         console.error("Event to delete not found in calendar:", event.id);
       }
     } else {
       // Fallback if the calendar API is not available
-      const updatedEvents = events.filter(e => e.id !== event.id);
-      setLocalEvents(updatedEvents);
+      // TODO: Remplacer par la logique d'API via Redux (créer un thunk `deleteEvent`)
+      console.log("Logique de suppression à implémenter via Redux");
+      // const updatedEvents = eventsFromStore.filter(e => e.id !== event.id);
       
-      // Serialize dates before dispatching
-      const serializableEventsOnDelete = updatedEvents.map(event => ({
-        ...event,
-        start: event.start ? new Date(event.start).toISOString() : null,
-        end: event.end ? new Date(event.end).toISOString() : null,
-      }));
-      dispatch(setEventsInStore(serializableEventsOnDelete)); // Synchronize serialized events with Redux store
+      // La suppression de l'événement dans le store Redux sera gérée par le futur thunk `deleteEvent`.
       
       // Remove the event from localStorage
       removeEventFromLocalStorage(event.id);
@@ -1192,6 +937,30 @@ function AppContent() {
     return <TempEvent eventInfo={eventInfo} />;
   };
 
+  // Filter events based on the current filters
+  const filteredEvents = useMemo(() => {
+    // If no events are loaded, return an empty array
+    if (!eventsFromStore) {
+      return [];
+    }
+
+    // Apply focus filter first
+    const focusFiltered = filterEventsByFocus(eventsFromStore, filters.focus, groupsById);
+    
+    // Then apply the general filters
+    return filterEvents(focusFiltered, filters);
+  }, [eventsFromStore, filters, groupsById]);
+
+  // Convert event dates from string to Date objects for FullCalendar
+  const calendarEvents = useMemo(() => {
+    if (!filteredEvents) return [];
+    return filteredEvents.map(event => ({
+      ...event,
+      start: event.start ? new Date(event.start) : null,
+      end: event.end ? new Date(event.end) : null,
+    }));
+  }, [filteredEvents]);
+
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <AuthInitializer>
@@ -1281,7 +1050,7 @@ function AppContent() {
                         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                         initialView={currentView}
                         headerToolbar={false}
-                        events={filterEvents(filterEventsByFocus(events, focus || null, groupsById), filters, groupsById)}
+                        events={calendarEvents}
                         dateClick={handleDateClick}
                         eventClick={handleEventClick}
                         eventChange={handleEventChange}
@@ -1320,8 +1089,8 @@ function AppContent() {
                               const viewEndDate = calendarApi.view.activeEnd; // Est exclusif
                               
                               // Filtrer les événements locaux par la plage de dates actuelle
-                              // 'events' est la state variable contenant la liste complète
-                              const eventsInView = filterEventsByDateRange(events, viewStartDate, viewEndDate);
+                              // 'eventsFromStore' est la state variable contenant la liste complète
+                              const eventsInView = filterEventsByDateRange(eventsFromStore, viewStartDate, viewEndDate);
                               
                               // Extraire les acteurs, groupes, couleurs uniques des événements visibles
                               // 'groupsById' est déjà récupéré via useSelector plus haut

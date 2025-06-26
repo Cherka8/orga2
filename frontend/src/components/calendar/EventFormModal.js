@@ -1122,13 +1122,14 @@ const EventFormModal = ({ isOpen, onClose, position, initialDate, onSave, eventR
       title: eventTitle,
       start: eventStart,
       end: eventEnd,
-      backgroundColor: eventColor,
-      borderColor: eventColor,
+      description: description, // Propriété de premier niveau pour le backend
+      event_color: eventColor, // Champ pour le backend
+      backgroundColor: eventColor, // Champ pour FullCalendar
+      borderColor: eventColor, // Champ pour FullCalendar
       extendedProps: {
         location: selectedLocation ? { ...selectedLocation } : null,
         participants: selectedParticipants.map(p => ({ ...p })),
-        presenterId: presenterId,
-        description: description
+        presenterId: presenterId
       }
     };
     

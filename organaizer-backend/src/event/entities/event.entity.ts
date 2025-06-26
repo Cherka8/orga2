@@ -45,6 +45,9 @@ export class Event {
   })
   endTime: Date;
 
+  @Column({ name: 'is_all_day', type: 'boolean', default: false })
+  isAllDay: boolean;
+
   @ManyToOne(() => Actor, { nullable: true })
   @JoinColumn({ name: 'location_actor_id' })
   locationActor: Actor; // Actor of type 'location'
