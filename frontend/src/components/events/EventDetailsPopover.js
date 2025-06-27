@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { fetchEventById } from '../../redux/slices/eventsSlice';
 import { ACTOR_TYPES } from '../../redux/slices/actorsSlice';
 import { selectGroupMembers } from '../../redux/slices/groupsSlice';
 import '../../styles/event-popover.css';
@@ -16,65 +17,44 @@ import '../../styles/event-popover.css';
  */
 const EventDetailsPopover = ({ event, position, onClose, isOpen, onEdit, onDelete }) => {
   const { t, i18n } = useTranslation();
+  const dispatch = useDispatch();
   const popoverRef = useRef(null);
-  const [locationActor, setLocationActor] = useState(null);
-  const [otherParticipants, setOtherParticipants] = useState([]);
-  const [presenterActor, setPresenterActor] = useState(null);
   const [adjustedPosition, setAdjustedPosition] = useState({ x: 0, y: 0 });
   const [isPositioned, setIsPositioned] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [isNearBottom, setIsNearBottom] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-  
-  // Récupérer les données des acteurs et des groupes
-  const actorsById = useSelector(state => state.actors.byId || {});
-  const groupsById = useSelector(state => state.groups.byId || {});
-  
-  // Extraire les participants de l'événement
+
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+
+  // --- Logique de données optimisée ---
+
+  // 1. Sélectionner l'événement détaillé depuis le store Redux.
+  const detailedEvent = useSelector(state =>
+    // Utiliser une égalité non stricte (==) pour faire correspondre l'ID de type chaîne (FullCalendar) et l'ID de type nombre (backend)
+    state.events.data.find(e => e.id == event.id)
+  ) || event;
+
+
+
+  // 2. Déclencher la récupération des détails de l'événement si nécessaire.
   useEffect(() => {
-    if (event) {
-      // Récupérer l'acteur lieu directement depuis extendedProps.location
-      if (event.extendedProps && event.extendedProps.location) {
-        setLocationActor(event.extendedProps.location);
-      } else {
-        setLocationActor(null);
-      }
-      
-      // Récupérer les autres participants depuis extendedProps.participants
-      if (event.extendedProps && event.extendedProps.participants) {
-        const participants = event.extendedProps.participants || [];
-        
-        // Enrichir les participants de type GROUP avec les données complètes du groupe
-        const enrichedParticipants = participants.map(participant => {
-          if (participant.type === ACTOR_TYPES.GROUP && participant.id) {
-            // Récupérer les données complètes du groupe depuis le store Redux
-            const fullGroupData = groupsById[participant.id];
-            if (fullGroupData) {
-              return { ...participant, ...fullGroupData };
-            }
-          }
-          return participant;
-        });
-        
-        // Récupérer l'intervenant (presenter) si présent
-        if (event.extendedProps.presenterId) {
-          const presenter = enrichedParticipants.find(p => p.id === event.extendedProps.presenterId);
-          setPresenterActor(presenter || null);
-          
-          // Filtrer l'intervenant de la liste des participants
-          const filteredParticipants = enrichedParticipants.filter(p => p.id !== event.extendedProps.presenterId);
-          setOtherParticipants(filteredParticipants);
-        } else {
-          setPresenterActor(null);
-          setOtherParticipants(enrichedParticipants);
-        }
-      } else {
-        setOtherParticipants([]);
-        setPresenterActor(null);
-      }
+    // On doit récupérer les détails si l'objet `detailedEvent` ne possède pas la propriété `locationActor`.
+    // C'est le signe que nous avons l'objet de base de FullCalendar et non notre objet détaillé de l'API.
+    const needsFetching = !detailedEvent.hasOwnProperty('locationActor');
+
+    if (needsFetching && event.id) {
+      dispatch(fetchEventById(event.id));
     }
-  }, [event, groupsById]);
-  
+  }, [event.id, detailedEvent, dispatch]);
+
+  // 3. Dériver directement les constantes pour l'affichage.
+  const locationActor = detailedEvent?.locationActor;
+  const presenterActor = detailedEvent?.presenterActor;
+  const otherParticipants = (detailedEvent?.participants || [])
+    .filter(p => p.actor && p.actor.id !== presenterActor?.id);
+
+
   // Fermer la popover si on clique en dehors
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -393,12 +373,15 @@ const EventDetailsPopover = ({ event, position, onClose, isOpen, onEdit, onDelet
 
   // Fonction pour obtenir les initiales d'un participant
   const getInitials = (participant) => {
-    if (!participant) return '';
-    
-    if (participant.type === ACTOR_TYPES.HUMAN) {
-      return `${participant.firstName?.[0] || ''}${participant.lastName?.[0] || ''}`.toUpperCase();
-    } else if (participant.type === ACTOR_TYPES.GROUP || participant.type === ACTOR_TYPES.LOCATION) {
-      return participant.name?.substring(0, 2).toUpperCase() || '';
+    if (!participant?.actor) return ''; // Vérifier la présence de l'acteur
+    const actor = participant.actor;
+
+    if (actor.type === ACTOR_TYPES.HUMAN) {
+      return `${actor.firstName?.[0] || ''}${actor.lastName?.[0] || ''}`.toUpperCase();
+    } else if (actor.type === ACTOR_TYPES.GROUP) {
+      return actor.name?.substring(0, 2).toUpperCase() || '';
+    } else if (actor.type === ACTOR_TYPES.LOCATION) {
+      return actor.locationName?.substring(0, 2).toUpperCase() || '';
     }
     return '';
   };
@@ -429,7 +412,7 @@ const EventDetailsPopover = ({ event, position, onClose, isOpen, onEdit, onDelet
     if (!presenterActor) return null;
     
     // Vérifier si l'intervenant a une photo ou un avatar
-    const hasImage = presenterActor.photo || presenterActor.avatar;
+    const hasImage = presenterActor.photoUrl;
     
     // Préparer le nom à afficher
     const presenterName = presenterActor.type === ACTOR_TYPES.HUMAN 
@@ -439,7 +422,7 @@ const EventDetailsPopover = ({ event, position, onClose, isOpen, onEdit, onDelet
     return (
       <div className="event-presenter-image-container">
         <div className="event-presenter-image" style={{
-          backgroundImage: hasImage ? `url(${presenterActor.photo || presenterActor.avatar})` : 'none',
+          backgroundImage: hasImage ? `url(${BACKEND_URL}${presenterActor.photoUrl})` : 'none',
           backgroundColor: !hasImage ? '#e5e7eb' : 'transparent'
         }}>
           {!hasImage && (
@@ -465,44 +448,45 @@ const EventDetailsPopover = ({ event, position, onClose, isOpen, onEdit, onDelet
     return (
       <div className="event-details-popover-participants">
         {otherParticipants.map(participant => {
-          // Vérifier si c'est un groupe
-          const isGroup = participant.type === ACTOR_TYPES.GROUP;
-          const isExpanded = expandedGroups[participant.id] || false;
+          const actor = participant.actor;
+          if (!actor) return null; // Sécurité pour ne pas rendre un participant sans acteur
+
+          const isGroup = actor.type === ACTOR_TYPES.GROUP;
+          const isExpanded = expandedGroups[actor.id] || false;
           
-          // Déterminer la source de l'image (photo, avatar ou image du groupe)
-          const imageSource = participant.photo || participant.avatar || participant.image || null;
+          const imageSource = actor.photoUrl || null;
           
           return (
-            <div key={participant.id} className="event-details-popover-participant-container">
+            <div key={actor.id} className="event-details-popover-participant-container">
               {/* Liste des membres du groupe (conditionnellement affichée au-dessus si près du bas) */}
               {isGroup && isExpanded && isNearBottom && (
                 <div className="event-details-popover-group-members event-details-popover-group-members-top event-details-popover-group-members-animated">
-                  {renderGroupMembers(participant)}
+                  {renderGroupMembers(actor)}
                 </div>
               )}
               
               {/* Participant principal (personne ou groupe) */}
               <div 
                 className={`event-details-popover-participant ${isGroup ? 'is-group' : ''}`}
-                onClick={isGroup ? () => toggleGroupExpansion(participant.id) : undefined}
+                onClick={isGroup ? () => toggleGroupExpansion(actor.id) : undefined}
               >
                 <div 
                   className="event-details-popover-participant-avatar"
                   style={{
-                    backgroundImage: imageSource ? `url(${imageSource})` : 'none',
+                    backgroundImage: imageSource ? `url(${BACKEND_URL}${imageSource})` : 'none',
                     backgroundColor: !imageSource ? '#e5e7eb' : 'transparent'
                   }}
                 >
                   {!imageSource && (
-                    participant.type === ACTOR_TYPES.HUMAN 
-                      ? `${participant.firstName?.charAt(0) || ''}${participant.lastName?.charAt(0) || ''}` 
-                      : participant.name?.charAt(0) || '?'
+                    actor.type === ACTOR_TYPES.HUMAN 
+                      ? `${actor.firstName?.charAt(0) || ''}${actor.lastName?.charAt(0) || ''}` 
+                      : actor.name?.charAt(0) || '?'
                   )}
                 </div>
                 <div className="event-details-popover-participant-name">
-                  {participant.type === ACTOR_TYPES.HUMAN 
-                    ? `${participant.firstName || ''} ${participant.lastName || ''}`.trim() 
-                    : participant.name || t('common.unnamed', 'Sans nom')}
+                  {actor.type === ACTOR_TYPES.HUMAN 
+                    ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() 
+                    : actor.name || t('common.unnamed', 'Sans nom')}
                   
                   {/* Flèche de dropdown pour les groupes (à côté du nom) */}
                   {isGroup && (
@@ -519,7 +503,7 @@ const EventDetailsPopover = ({ event, position, onClose, isOpen, onEdit, onDelet
               {/* Liste des membres du groupe (conditionnellement affichée en-dessous si pas près du bas) */}
               {isGroup && isExpanded && !isNearBottom && (
                 <div className="event-details-popover-group-members event-details-popover-group-members-animated">
-                  {renderGroupMembers(participant)}
+                  {renderGroupMembers(actor)}
                 </div>
               )}
             </div>
@@ -533,118 +517,59 @@ const EventDetailsPopover = ({ event, position, onClose, isOpen, onEdit, onDelet
   const renderGroupMembers = (group) => {
     // Vérifier si le groupe a des membres directement dans ses props
     if (group.members && Array.isArray(group.members)) {
-      // Si les membres sont des objets complets (avec propriétés comme firstName, lastName, etc.)
-      if (group.members.length > 0 && typeof group.members[0] === 'object') {
-        return group.members.map(member => {
-          // Déterminer la source de l'image (photo, avatar ou image)
-          const imageSource = member.photo || member.avatar || member.image || null;
-          
-          return (
-            <div key={member.id} className="event-details-popover-group-member">
-              <div 
-                className="event-details-popover-group-member-avatar"
-                style={{
-                  backgroundImage: imageSource ? `url(${imageSource})` : 'none',
-                  backgroundColor: !imageSource ? '#e5e7eb' : 'transparent'
-                }}
-              >
-                {!imageSource && (
-                  member.type === ACTOR_TYPES.HUMAN 
-                    ? `${member.firstName?.charAt(0) || ''}${member.lastName?.charAt(0) || ''}` 
-                    : member.name?.charAt(0) || '?'
-                )}
-              </div>
-              <div className="event-details-popover-group-member-name">
-                {member.type === ACTOR_TYPES.HUMAN 
-                  ? `${member.firstName || ''} ${member.lastName || ''}`.trim() 
-                  : member.name || t('common.unnamed', 'Sans nom')}
-              </div>
-            </div>
-          );
-        });
-      } 
-      // Si les membres sont des IDs, récupérer les acteurs correspondants dans le store
-      else {
-        const members = group.members
-          .map(memberId => actorsById[memberId])
-          .filter(Boolean);
-        
-        if (members.length === 0) {
-          return <div className="event-details-popover-group-member-empty">{t('eventDetailsPopover.noMembers', 'Aucun membre')}</div>;
-        }
-        
-        return members.map(member => {
-          // Déterminer la source de l'image (photo, avatar ou image)
-          const imageSource = member.photo || member.avatar || member.image || null;
-          
-          return (
-            <div key={member.id} className="event-details-popover-group-member">
-              <div 
-                className="event-details-popover-group-member-avatar"
-                style={{
-                  backgroundImage: imageSource ? `url(${imageSource})` : 'none',
-                  backgroundColor: !imageSource ? '#e5e7eb' : 'transparent'
-                }}
-              >
-                {!imageSource && (
-                  member.type === ACTOR_TYPES.HUMAN 
-                    ? `${member.firstName?.charAt(0) || ''}${member.lastName?.charAt(0) || ''}` 
-                    : member.name?.charAt(0) || '?'
-                )}
-              </div>
-              <div className="event-details-popover-group-member-name">
-                {member.type === ACTOR_TYPES.HUMAN 
-                  ? `${member.firstName || ''} ${member.lastName || ''}`.trim() 
-                  : member.name || t('common.unnamed', 'Sans nom')}
-              </div>
-            </div>
-          );
-        });
-      }
-    }
-    
-    // Essayer de récupérer les membres depuis le store Redux si le groupe y existe
-    const groupData = groupsById[group.id];
-    if (groupData && groupData.members && groupData.members.length > 0) {
-      const members = groupData.members
-        .map(memberId => actorsById[memberId])
-        .filter(Boolean);
-      
-      if (members.length === 0) {
+      // Avec la nouvelle API, `group.members` contient directement la liste des objets membres complets.
+      // Chaque membre a une propriété `actor` ou `group` qui contient les détails.
+      if (!group.members || group.members.length === 0) {
         return <div className="event-details-popover-group-member-empty">{t('eventDetailsPopover.noMembers', 'Aucun membre')}</div>;
       }
-      
-      return members.map(member => {
-        // Déterminer la source de l'image (photo, avatar ou image)
-        const imageSource = member.photo || member.avatar || member.image || null;
-        
+
+      return group.members.map(memberRelation => {
+        // Le vrai membre est dans `memberRelation.actor` ou `memberRelation.group`
+        const member = memberRelation.actor || memberRelation.group;
+        if (!member) return null; // Sécurité si les données sont invalides
+
+        // Gérer les sous-groupes (récursivité)
+        if (member.type === ACTOR_TYPES.GROUP) {
+          return (
+            <div key={member.id} className="event-details-popover-group-participant">
+              <div className="event-details-popover-group-header">
+                <div className="event-details-popover-group-icon"></div>
+                <div className="event-details-popover-group-name">{member.name}</div>
+              </div>
+              <div className="event-details-popover-group-members-container">
+                {renderGroupMembers(member)} 
+              </div>
+            </div>
+          );
+        }
+
+        // Gérer les acteurs (humains, etc.)
+        const imageSource = member.photo_url || member.photo || member.avatar || member.image || null;
+
         return (
           <div key={member.id} className="event-details-popover-group-member">
             <div 
               className="event-details-popover-group-member-avatar"
               style={{
-                backgroundImage: imageSource ? `url(${imageSource})` : 'none',
+                backgroundImage: imageSource ? `url(${BACKEND_URL}${imageSource})` : 'none',
                 backgroundColor: !imageSource ? '#e5e7eb' : 'transparent'
               }}
             >
               {!imageSource && (
                 member.type === ACTOR_TYPES.HUMAN 
-                  ? `${member.firstName?.charAt(0) || ''}${member.lastName?.charAt(0) || ''}` 
+                  ? `${member.first_name?.charAt(0) || ''}${member.last_name?.charAt(0) || ''}` 
                   : member.name?.charAt(0) || '?'
               )}
             </div>
             <div className="event-details-popover-group-member-name">
               {member.type === ACTOR_TYPES.HUMAN 
-                ? `${member.firstName || ''} ${member.lastName || ''}`.trim() 
+                ? `${member.first_name || ''} ${member.last_name || ''}`.trim() 
                 : member.name || t('common.unnamed', 'Sans nom')}
             </div>
           </div>
         );
       });
     }
-    
-    // Si aucun membre n'est trouvé
-    return <div className="event-details-popover-group-member-empty">{t('eventDetailsPopover.noMembers', 'Aucun membre')}</div>;
   };
   
   // Fonction pour déterminer la classe du titre en fonction de sa longueur
@@ -685,8 +610,8 @@ const EventDetailsPopover = ({ event, position, onClose, isOpen, onEdit, onDelet
         <div 
           className="event-details-popover-header"
           style={{ 
-            backgroundColor: (locationActor?.photo || locationActor?.avatar) ? 'transparent' : eventColor,
-            backgroundImage: (locationActor?.photo || locationActor?.avatar) ? `url(${locationActor.photo || locationActor.avatar})` : 'none'
+            backgroundColor: locationActor?.photoUrl ? 'transparent' : eventColor,
+            backgroundImage: locationActor?.photoUrl ? `url(${BACKEND_URL}${locationActor.photoUrl})` : 'none'
           }}
         >
           {/* Badge de couleur */}
@@ -710,7 +635,7 @@ const EventDetailsPopover = ({ event, position, onClose, isOpen, onEdit, onDelet
             {locationActor && (
               <div className="event-details-popover-location">
                 <span className="event-details-popover-location-icon">📍</span>
-                <span>{locationActor.name}</span>
+                <span>{locationActor.locationName}</span>
               </div>
             )}
           </div>

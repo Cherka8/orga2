@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux'; // Assurer que useDispatch est importé
 import { store } from './redux/store';
 import { selectAllFilters } from './redux/slices/viewsSlice';
@@ -25,6 +25,7 @@ import {
   extractItemsFromEvents // <-- Nouveau
 } from './utils/viewsUtils';
 import { selectGroupsByIdMap } from './redux/slices/groupsSlice';
+import { selectIsAuthenticated } from './redux/slices/authSlice';
 import { 
   initializeFilters, 
   updateAvailableColors, 
@@ -50,6 +51,18 @@ const AuthInitializer = lazy(() => import('./components/auth/AuthInitializer'));
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+
+  useEffect(() => {
+    const publicPages = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
+    const isPublicPage = publicPages.some(page => location.pathname.startsWith(page));
+
+    if (!isAuthenticated && !isPublicPage) {
+      console.log('User is not authenticated, redirecting to login.');
+      navigate('/login');
+    }
+  }, [isAuthenticated, location.pathname, navigate]);
   // Déterminer si nous sommes sur une page d'authentification ou de profil
     const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/email-verification'].some(path => location.pathname.startsWith(path));
   const isProfilePage = location.pathname === '/profile';
@@ -603,28 +616,19 @@ function AppContent() {
 
   // Handle saving an event
   const [isSaving, setIsSaving] = useState(false);
-  const handleSaveEvent = (newEvent) => {
-    const isEditing = eventToEdit !== null;
+  const handleSaveEvent = (savedEvent) => {
+    // La logique de sauvegarde est maintenant entièrement gérée dans EventFormModal.
+    // Cette fonction est appelée après le succès de la sauvegarde.
+    // Le `savedEvent` est déjà ajouté à l'état Redux par le thunk `createEvent` ou `updateEvent`.
+    // Nous n'avons donc plus rien à dispatcher ici. On se contente de fermer la modale.
+    console.log('Event action successful via modal, closing now.', savedEvent);
+    handleCloseEventModal();
 
-    // ===============================================
-    // == NOUVELLE LOGIQUE DE CRÉATION (VIA API)
-    // ===============================================
+    // La logique ci-dessous est pour l'édition, qui est gérée différemment pour l'instant.
+    // Si nous venons de créer un événement, nous sortons.
+    const isEditing = eventToEdit !== null;
     if (!isEditing) {
-      // S'assurer que le titre et les dates existent avant de créer l'événement
-      if (newEvent.title && newEvent.start && newEvent.end) {
-        console.log("Dispatching createEvent with:", newEvent);
-        dispatch(createEvent({
-          title: newEvent.title,
-          start: newEvent.start.toISOString(),
-          end: newEvent.end.toISOString(),
-          event_color: newEvent.event_color, // Transmettre la couleur
-        description: newEvent.description, // Transmettre la description
-        }));
-      } else {
-        console.error("Cannot create event: title, start, or end is missing.", newEvent);
-      }
-      handleCloseEventModal();
-      return; // Important: on arrête l'exécution ici pour la création
+      return;
     }
 
     // ===============================================
@@ -953,13 +957,26 @@ function AppContent() {
 
   // Convert event dates from string to Date objects for FullCalendar
   const calendarEvents = useMemo(() => {
-    if (!filteredEvents) return [];
-    return filteredEvents.map(event => ({
+    const baseEvents = filteredEvents ? filteredEvents.map(event => ({
       ...event,
       start: event.start ? new Date(event.start) : null,
       end: event.end ? new Date(event.end) : null,
-    }));
-  }, [filteredEvents]);
+    })) : [];
+
+    // Si un événement temporaire existe (et qu'on n'est pas en mode édition), on l'ajoute
+    if (tempEvent && !eventToEdit) {
+      // On vérifie qu'il n'est pas déjà dans la liste pour éviter les doublons
+      if (!baseEvents.some(e => e.id === tempEvent.id)) {
+        baseEvents.push({
+          ...tempEvent,
+          start: new Date(tempEvent.start),
+          end: new Date(tempEvent.end)
+        });
+      }
+    }
+    
+    return baseEvents;
+  }, [filteredEvents, tempEvent, eventToEdit]);
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
@@ -1109,6 +1126,9 @@ function AppContent() {
                               // --- FIN AJOUT ---
                             }
                           }
+                        }}
+                                                datesSet={(dateInfo) => {
+                          dispatch(fetchEvents({ start: dateInfo.startStr, end: dateInfo.endStr }));
                         }}
                         dayHeaderContent={({ date }) => {
                           const day = date.getDate();

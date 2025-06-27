@@ -11,9 +11,12 @@ const initialState = {
 // Thunk pour récupérer tous les événements
 export const fetchEvents = createAsyncThunk(
   'events/fetchEvents',
-  async (_, { rejectWithValue }) => {
+  // On remplace '_' par 'dateRange'. On lui donne une valeur par défaut {}
+  // pour que les appels existants sans dates continuent de fonctionner.
+  async (dateRange = {}, { rejectWithValue }) => {
     try {
-      const events = await eventService.getEvents();
+      // On passe l'objet dateRange à la fonction du service.
+      const events = await eventService.getEvents(dateRange);
       // Le backend retourne startTime et endTime. On les mappe vers start et end.
       // On garde les dates comme des strings ISO pour la sérialisation.
       return events.map(event => ({
@@ -35,10 +38,44 @@ export const createEvent = createAsyncThunk(
   async (eventData, { rejectWithValue }) => {
     try {
       // Le service retourne l'événement créé avec startTime et endTime
-      const response = await eventService.createEvent(eventData);
-      return response.data; // Retourner directement les données sérializables
+      const newEvent = await eventService.createEvent(eventData);
+      return newEvent; // Retourner directement l'objet événement
     } catch (error) {
       return rejectWithValue(error.response.data);
+    }
+  }
+);
+
+// Thunk pour récupérer un événement par son ID avec tous les détails
+export const fetchEventById = createAsyncThunk(
+  'events/fetchEventById',
+  async (eventId, { rejectWithValue }) => {
+    try {
+      const event = await eventService.getEventById(eventId);
+      // Mapper les noms de champs pour la cohérence avec FullCalendar
+      return {
+        ...event,
+        start: event.startTime,
+        end: event.endTime,
+        backgroundColor: event.eventColor,
+        borderColor: event.eventColor,
+      };
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+// Thunk pour mettre à jour un événement
+export const updateEvent = createAsyncThunk(
+  'events/updateEvent',
+  async ({ id, eventData }, { rejectWithValue }) => {
+    try {
+      // Le service doit retourner l'événement mis à jour
+      const updatedEvent = await eventService.updateEvent(id, eventData);
+      return updatedEvent;
+    } catch (error) {
+      return rejectWithValue(error.response ? error.response.data : error.message);
     }
   }
 );
@@ -87,6 +124,50 @@ const eventsSlice = createSlice({
         }
       })
       .addCase(createEvent.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+      })
+      // Fetch event by ID
+      .addCase(fetchEventById.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(fetchEventById.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        const updatedEvent = action.payload;
+        const index = state.data.findIndex(event => event.id === updatedEvent.id);
+        if (index !== -1) {
+          // Remplacer l'événement existant par la version détaillée
+          state.data[index] = updatedEvent;
+        } else {
+          // Si l'événement n'est pas dans la liste, on l'ajoute
+          state.data.push(updatedEvent);
+        }
+      })
+      .addCase(fetchEventById.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+      })
+      // Update event
+      .addCase(updateEvent.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(updateEvent.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        const updatedEvent = action.payload;
+        const index = state.data.findIndex(event => event.id === updatedEvent.id);
+        if (index !== -1) {
+          // Mapper les noms de champs pour la cohérence avec FullCalendar
+          state.data[index] = {
+            ...state.data[index], // Conserver les props non retournées par l'API si besoin
+            ...updatedEvent,
+            start: updatedEvent.startTime,
+            end: updatedEvent.endTime,
+            backgroundColor: updatedEvent.eventColor,
+            borderColor: updatedEvent.eventColor,
+          };
+        }
+      })
+      .addCase(updateEvent.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
       });

@@ -43,6 +43,7 @@ export class EventParticipant {
   @ManyToOne(() => Actor, (actor) => actor.eventParticipations, {
     onDelete: 'CASCADE',
     nullable: true,
+    eager: true, // Charger l'acteur associé automatiquement
   })
   @JoinColumn({ name: 'actor_id' })
   actor: Actor;
@@ -50,6 +51,7 @@ export class EventParticipant {
   @ManyToOne(() => Group, { // Relation unidirectionnelle pour l'instant
     onDelete: 'CASCADE',
     nullable: true,
+    eager: true, // Charger le groupe associé automatiquement
   })
   @JoinColumn({ name: 'group_id' })
   group: Group;

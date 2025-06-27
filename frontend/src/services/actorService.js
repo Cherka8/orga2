@@ -1,40 +1,4 @@
-import axios from 'axios';
-import { store } from '../redux/store';
-import { logout } from '../redux/slices/authSlice';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-
-const apiClient = axios.create({
-  baseURL: API_URL,
-});
-
-// Interceptor to add the auth token to every request
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    } 
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Interceptor to handle 401 errors
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      console.error('Unauthorized access - 401. Logging out.');
-      store.dispatch(logout());
-      // Optionnel: rediriger vers la page de connexion
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
+import apiClient from './api';
 
 const createActor = (actorData) => {
   console.log('Creating actor with data:', actorData);

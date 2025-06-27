@@ -1,69 +1,68 @@
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-
-const apiClient = axios.create({
-  baseURL: `${API_URL}/api`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Intercepteur pour ajouter le token JWT à chaque requête
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Intercepteur pour gérer les erreurs 401 (Unauthorized)
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      console.error('Unauthorized! Session may have expired. Logging out.');
-      // Supprimer les informations de l'utilisateur du localStorage
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // Rediriger vers la page de connexion pour une nouvelle authentification
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
-/**
- * Crée un nouvel événement.
- * @param {object} eventData - Les données de l'événement à créer.
- * @returns {Promise<object>} La réponse de l'API.
- */
-export const createEvent = (eventData) => {
-  return apiClient.post('/events', eventData);
-};
+import apiClient from './api';
 
 // Fonction pour récupérer tous les événements
-export const getEvents = async () => {
+const getEvents = async () => {
   try {
+    console.log('Fetching events...');
     const response = await apiClient.get('/events');
+    console.log('Events fetched successfully:', response.data);
     return response.data;
   } catch (error) {
-    console.error("Error fetching events:", error.response?.data || error.message);
-    throw error.response?.data || new Error('Failed to fetch events');
+    console.error('Erreur lors de la récupération des événements:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Fonction pour créer un nouvel événement
+const createEvent = async (eventData) => {
+  try {
+    const response = await apiClient.post('/events', eventData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la création de l\'événement:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Fonction pour mettre à jour un événement existant
+const updateEvent = async (id, eventData) => {
+  try {
+    const response = await apiClient.put(`/events/${id}`, eventData);
+    return response.data;
+  } catch (error) {
+    console.error(`Erreur lors de la mise à jour de l'événement ${id}:`, error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Fonction pour supprimer un événement
+const deleteEvent = async (id) => {
+  try {
+    const response = await apiClient.delete(`/events/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Erreur lors de la suppression de l'événement ${id}:`, error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Fonction pour récupérer un événement par son ID
+const getEventById = async (id) => {
+  try {
+    const response = await apiClient.get(`/events/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Erreur lors de la récupération de l'événement ${id}:`, error.response?.data || error.message);
+    throw error;
   }
 };
 
 const eventService = {
-  createEvent,
   getEvents,
+  getEventById,
+  createEvent,
+  updateEvent,
+  deleteEvent,
 };
 
 export default eventService;

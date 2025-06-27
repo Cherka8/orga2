@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsDateString, IsOptional, IsISO8601, IsHexColor } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, IsDateString, IsISO8601, IsHexColor, ValidateIf } from 'class-validator';
 
 export class CreateEventDto {
   @IsString()
@@ -6,13 +6,12 @@ export class CreateEventDto {
   title: string;
 
   @IsDateString()
-  @IsOptional()
-  start?: string;
+  @IsNotEmpty()
+  start: string;
 
   @IsDateString()
-  @IsOptional()
-  @IsISO8601()
-  end?: string;
+  @IsNotEmpty()
+  end: string;
 
   @IsOptional()
   @IsHexColor()
@@ -21,4 +20,19 @@ export class CreateEventDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsOptional()
+  @ValidateIf((o, v) => v !== null)
+  @IsNumber()
+  location_actor_id?: number | null;
+
+  @IsOptional()
+  @ValidateIf((o, v) => v !== null)
+  @IsNumber()
+  presenter_actor_id?: number | null;
+
+  @IsOptional()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  participant_ids?: number[];
 }

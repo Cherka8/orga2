@@ -234,31 +234,35 @@ export const extractItemsFromEvents = (eventsInView, groupsById) => {
   const groups = new Set();
   const colors = new Set();
 
-  if (!eventsInView) return { actors, groups, colors };
+  if (!eventsInView) {
+    return { actors, groups, colors };
+  }
 
   eventsInView.forEach(event => {
-    // Extract color
-    if (event.backgroundColor) {
-      colors.add(event.backgroundColor);
+    // 1. Extraire la couleur de l'événement
+    if (event.eventColor) {
+      colors.add(event.eventColor);
     }
 
-    // Extract presenter (assuming it's an actor ID)
-    if (event.extendedProps?.presenterId) {
-      actors.add(event.extendedProps.presenterId);
+    // 2. Extraire le présentateur (presenterActor)
+    if (event.presenterActor && event.presenterActor.id) {
+      actors.add(event.presenterActor.id);
     }
 
-    // Extract participants
-    if (Array.isArray(event.extendedProps?.participants)) {
-      event.extendedProps.participants.forEach(participant => {
-        if (!participant || !participant.id || !participant.type) return;
+    // 3. Extraire le lieu (locationActor)
+    if (event.locationActor && event.locationActor.id) {
+      actors.add(event.locationActor.id);
+    }
 
-        if (participant.type === 'human') {
-          actors.add(participant.id);
-        } else if (participant.type === 'group') {
-          // Optionally check if group exists in groupsById if needed
-          groups.add(participant.id);
+    // 4. Extraire les participants (acteurs et groupes)
+    if (Array.isArray(event.participants)) {
+      event.participants.forEach(p => {
+        if (p.actor && p.actor.id) {
+          actors.add(p.actor.id);
         }
-        // Add other types like 'object' or 'place' if they should appear in views
+        if (p.group && p.group.id) {
+          groups.add(p.group.id);
+        }
       });
     }
   });

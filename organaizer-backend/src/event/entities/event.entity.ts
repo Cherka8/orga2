@@ -48,16 +48,16 @@ export class Event {
   @Column({ name: 'is_all_day', type: 'boolean', default: false })
   isAllDay: boolean;
 
-  @ManyToOne(() => Actor, { nullable: true })
+  @ManyToOne(() => Actor, { nullable: true, eager: true })
   @JoinColumn({ name: 'location_actor_id' })
-  locationActor: Actor; // Actor of type 'location'
+  locationActor: Actor | null; // Actor of type 'location'
 
-  @ManyToOne(() => Actor, { nullable: true })
+  @ManyToOne(() => Actor, { nullable: true, eager: true })
   @JoinColumn({ name: 'presenter_actor_id' })
-  presenterActor: Actor; // Actor of type 'human'
+  presenterActor: Actor | null; // Actor of type 'human'
 
   @Column({ type: 'varchar', length: 7, nullable: true, name: 'event_color' })
-  eventColor: string;
+  eventColor: string | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
@@ -65,6 +65,6 @@ export class Event {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
   updatedAt: Date;
 
-  @OneToMany(() => EventParticipant, (eventParticipant) => eventParticipant.event)
+  @OneToMany(() => EventParticipant, (eventParticipant) => eventParticipant.event, { cascade: true })
   participants: EventParticipant[];
 }

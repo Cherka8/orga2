@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, useReducer } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next'; // Import useTranslation
 import { fr, enUS } from 'date-fns/locale'; // Import date-fns locales
-import { selectAllActors, ACTOR_TYPES } from '../../redux/slices/actorsSlice';
-import { selectAllGroups } from '../../redux/slices/groupsSlice';
+import { selectAllActors, ACTOR_TYPES, fetchActors } from '../../redux/slices/actorsSlice';
+import { selectAllGroups, fetchGroups } from '../../redux/slices/groupsSlice';
+import { createEvent, updateEvent } from '../../redux/slices/eventsSlice';
 import { formatTime, formatDate, TIME_OPTIONS } from '../../utils/timeUtils';
 import { getColorName, getPaletteHexCodes } from '../../utils/colorUtils';
 import '../../styles/event-modal.css';
@@ -129,6 +130,8 @@ const DraggableTimeControl = ({ value, onDrag, type, onClick }) => {
  */
 const EventFormModal = ({ isOpen, onClose, position, initialDate, onSave, eventRect, updateTempEvent, eventToEdit }) => {
   const { t, i18n } = useTranslation(); // Get t function and i18n instance
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+  const dispatch = useDispatch();
   const currentLanguage = i18n.language;
   const dateFnsLocale = currentLanguage === 'fr' ? fr : enUS; // Determine date-fns locale
 
@@ -258,10 +261,20 @@ const EventFormModal = ({ isOpen, onClose, position, initialDate, onSave, eventR
   // Update fields when eventToEdit changes
   useEffect(() => {
     if (eventToEdit) {
+      // --- MODE ÉDITION : on remplit le formulaire ---
       setTitle(eventToEdit.title || '');
-      setSelectedLocation(eventToEdit.extendedProps?.location || null);
-      setSelectedParticipants(eventToEdit.extendedProps?.participants || []);
-      setPresenterId(eventToEdit.extendedProps?.presenterId || null);
+      
+      if (eventToEdit.extendedProps?.participants) {
+        const validParticipants = eventToEdit.extendedProps.participants
+          .map(p => p.actor)
+          .filter(Boolean);
+        setSelectedParticipants(validParticipants);
+      } else {
+        setSelectedParticipants([]);
+      }
+
+      setSelectedLocation(eventToEdit.extendedProps?.locationActor || null);
+      setPresenterId(eventToEdit.extendedProps?.presenterActor?.id || null);
       setDescription(eventToEdit.extendedProps?.description || '');
       setEventColor(eventToEdit.backgroundColor || '#4f46e5');
       
@@ -272,8 +285,28 @@ const EventFormModal = ({ isOpen, onClose, position, initialDate, onSave, eventR
           endDate: new Date(eventToEdit.end)
         }
       });
+    } else {
+      // --- MODE CRÉATION : on réinitialise tout ---
+      setTitle('');
+      setSelectedParticipants([]);
+      setSelectedLocation(null);
+      setPresenterId(null);
+      setDescription('');
+      setEventColor('#4f46e5'); // Couleur par défaut
+      setErrorMessage('');
+      setTimeValidationError('');
+      
+      const newStartDate = initialDate || new Date();
+      const newEndDate = initialDate 
+        ? new Date(new Date(initialDate).setHours(initialDate.getHours() + 1)) 
+        : new Date(new Date().setHours(new Date().getHours() + 1));
+      
+      dateTimeDispatch({
+        type: 'UPDATE_ALL',
+        payload: { startDate: newStartDate, endDate: newEndDate }
+      });
     }
-  }, [eventToEdit]);
+  }, [eventToEdit, initialDate]); // On ajoute initialDate aux dépendances
 
   // Update dates when initialDate changes
   useEffect(() => {
@@ -773,6 +806,8 @@ const EventFormModal = ({ isOpen, onClose, position, initialDate, onSave, eventR
   // Focus on the title field when the popup opens
   useEffect(() => {
     if (isOpen) {
+      dispatch(fetchActors());
+      dispatch(fetchGroups());
       // Small delay to ensure the modal is rendered
       setTimeout(() => {
         if (refs.current.titleInput) {
@@ -1095,15 +1130,21 @@ const EventFormModal = ({ isOpen, onClose, position, initialDate, onSave, eventR
     }
   };
 
-  const handleRemoveParticipant = (participantId) => {
+    const handleRemoveParticipant = (participantId) => {
     const updatedParticipants = selectedParticipants.filter(p => p.id !== participantId);
     setSelectedParticipants(updatedParticipants);
     
+    // If the removed participant was the presenter, reset presenterId
+    if (presenterId === participantId) {
+      setPresenterId(null);
+    }
+
     // Mettre à jour l'événement temporaire avec les participants mis à jour
     if (updateTempEvent) {
       debouncedUpdateTempEvent({
         extendedProps: {
-          participants: updatedParticipants
+          participants: updatedParticipants,
+          presenterId: presenterId === participantId ? null : presenterId
         }
       });
     }
@@ -1111,39 +1152,41 @@ const EventFormModal = ({ isOpen, onClose, position, initialDate, onSave, eventR
 
   // Handle saving the event
   const handleSave = () => {
-    const eventTitle = title.trim() || t('eventForm.untitledEvent'); // Use translation key
-    
-    // Ensure dates are properly cloned to avoid reference issues
-    const eventStart = new Date(dateTimeState.startDate.getTime());
-    const eventEnd = new Date(dateTimeState.endDate.getTime());
-    
-    const newEvent = {
-      id: eventToEdit ? eventToEdit.id : String(Date.now()) + '-' + Math.floor(Math.random() * 1000),
-      title: eventTitle,
-      start: eventStart,
-      end: eventEnd,
-      description: description, // Propriété de premier niveau pour le backend
-      event_color: eventColor, // Champ pour le backend
-      backgroundColor: eventColor, // Champ pour FullCalendar
-      borderColor: eventColor, // Champ pour FullCalendar
-      extendedProps: {
-        location: selectedLocation ? { ...selectedLocation } : null,
-        participants: selectedParticipants.map(p => ({ ...p })),
-        presenterId: presenterId
-      }
+    if (!title.trim()) {
+      setErrorMessage(t('eventForm.errorTitleRequired'));
+      return;
+    }
+
+    // Préparer les données pour l'API backend (correspondant au DTO)
+    const eventData = {
+      title: title.trim(),
+      start: dateTimeState.startDate.toISOString(),
+      end: dateTimeState.endDate.toISOString(),
+      description: description,
+      event_color: eventColor,
+      location_actor_id: selectedLocation ? selectedLocation.id : null,
+      participant_ids: selectedParticipants.map(p => p.id),
+      presenter_actor_id: presenterId,
     };
-    
-    onSave(newEvent);
-    
-    // Reset the form
-    setTitle('');
-    pickerDispatch({ type: 'SET_SEARCH_TERM', payload: '' });
-    pickerDispatch({ type: 'SET_ACTIVE_FILTER', payload: 'all' });
-    setSelectedLocation(null);
-    setSelectedParticipants([]);
-    setPresenterId(null);
-    setDescription('');
-    setEventColor('#4f46e5'); // Réinitialiser la couleur
+
+    // Déterminer l'action à dispatcher : créer ou mettre à jour
+    const actionToDispatch = eventToEdit
+      ? updateEvent({ id: eventToEdit.id, eventData })
+      : createEvent(eventData);
+
+    dispatch(actionToDispatch)
+      .unwrap()
+      .then((savedEvent) => {
+        if (onSave) {
+          onSave(savedEvent);
+        }
+        onClose(); // Fermer la modale en cas de succès
+      })
+      .catch((error) => {
+        console.error(`Failed to ${eventToEdit ? 'update' : 'create'} event:`, error);
+        const message = error.message || t('eventForm.genericError');
+        setErrorMessage(message);
+      });
   };
 
   // Palette de couleurs variées
@@ -1347,14 +1390,29 @@ const EventFormModal = ({ isOpen, onClose, position, initialDate, onSave, eventR
                 }`}
                 onClick={() => handleActorSelect(actor)}
               >
-                <div className={`event-popup-actor-avatar ${actor.type}`}>
-                  {getActorAvatar(actor) ? (
-                    <img src={getActorAvatar(actor)} alt={getActorName(actor)} />
-                  ) : (
-                    getActorInitial(actor)
-                  )}
-                </div>
-                <div className="event-popup-actor-name">{getActorName(actor)}</div>
+                {actor.type === ACTOR_TYPES.LOCATION ? (
+                  <>
+                    <div className={`event-popup-actor-avatar ${actor.type}`}>
+                      {actor.photoUrl ? (
+                        <img src={`${BACKEND_URL}${actor.photoUrl}`} alt={actor.locationName} />
+                      ) : (
+                        actor.locationName?.charAt(0)
+                      )}
+                    </div>
+                    <div className="event-popup-actor-name">{actor.locationName}</div>
+                  </>
+                ) : (
+                  <>
+                    <div className={`event-popup-actor-avatar ${actor.type}`}>
+                      {getActorAvatar(actor) ? (
+                        <img src={getActorAvatar(actor)} alt={getActorName(actor)} />
+                      ) : (
+                        getActorInitial(actor)
+                      )}
+                    </div>
+                    <div className="event-popup-actor-name">{getActorName(actor)}</div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -1370,15 +1428,15 @@ const EventFormModal = ({ isOpen, onClose, position, initialDate, onSave, eventR
                 {selectedLocation ? (
                   <div className="event-popup-selected-location">
                     <div className="event-popup-location-background">
-                      {(selectedLocation.avatar || selectedLocation.photo) ? (
-                        <img src={selectedLocation.avatar || selectedLocation.photo} alt={getActorName(selectedLocation)} />
+                      {selectedLocation.photoUrl ? (
+                        <img src={`${BACKEND_URL}${selectedLocation.photoUrl}`} alt={selectedLocation.locationName} />
                       ) : (
                         <div className="event-popup-location-placeholder">
-                          {getActorInitial(selectedLocation)}
+                          {selectedLocation.locationName?.charAt(0)}
                         </div>
                       )}
                     </div>
-                    <div className="event-popup-location-name">{getActorName(selectedLocation)}</div>
+                    <div className="event-popup-location-name">{selectedLocation.locationName}</div>
                     <div 
                       className="event-popup-location-remove"
                       onClick={handleRemoveLocation}
