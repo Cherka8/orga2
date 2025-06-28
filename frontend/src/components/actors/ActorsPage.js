@@ -11,7 +11,6 @@ import {
   ACTOR_TYPES
 } from '../../redux/slices/actorsSlice';
 import { selectActorsLoading, selectActorsError } from '../../redux/slices/actorsSlice';
-import { fetchGroups } from '../../redux/slices/groupsSlice';
 import Pagination from '../common/Pagination';
 import ActorsToolbar from './ActorsToolbar';
 import ActorsList from './list/ActorsList';
@@ -66,10 +65,7 @@ const ActorsPage = () => {
     dispatch(fetchActors({ ...filter, page: pagination.page, limit: pagination.limit }));
   }, [dispatch, activeTab, filter, pagination.page]);
 
-  // Chargement initial des groupes, une seule fois au montage
-  useEffect(() => {
-    dispatch(fetchGroups());
-  }, [dispatch]);
+
 
   const handlePageChange = (newPage) => {
     dispatch(setPage(newPage));

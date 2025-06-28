@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { selectEvents } from '../../redux/slices/eventsSlice';
+import { selectVisibleEvents } from '../../redux/slices/eventsSlice';
 import { selectActorsByIdMap } from '../../redux/slices/actorsSlice'; 
 import { selectGroupsByIdMap } from '../../redux/slices/groupsSlice'; 
 import { 
@@ -18,7 +18,7 @@ import { fr, enUS } from 'date-fns/locale';
 
 const TimeView = () => {
   const { t, i18n } = useTranslation(); // Hook de traduction
-  const events = useSelector(selectEvents);
+    const events = useSelector(selectVisibleEvents);
   const actorsById = useSelector(selectActorsByIdMap);
   const groupsById = useSelector(selectGroupsByIdMap);
 

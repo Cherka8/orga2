@@ -9,24 +9,29 @@ import ViewItem from './ViewItem';
 const ItemsList = ({ items, visibilityState, focusState, toggleVisibility, type }) => {
   // Mémoriser la liste des items pour éviter les re-rendus inutiles
   const renderedItems = useMemo(() => {
-    return items.map(item => (
-      <ViewItem
-        key={item.id}
-        id={item.id}
-        name={item.name}
-        type={type}
-        isVisible={visibilityState[item.id] !== false}
-        color={item.color}
-        image={item.image}
-        toggleVisibility={toggleVisibility}
-        isFocusActive={focusState.active}
-        isFocused={
-          focusState.active && 
-          focusState.target.id === item.id && 
-          focusState.target.type === type
-        }
-      />
-    ));
+
+    return items.map(item => {
+      const isVisible = visibilityState[item.id] !== false;
+
+      return (
+        <ViewItem
+          key={item.id}
+          id={item.id}
+          name={item.name}
+          type={type}
+          isVisible={isVisible}
+          color={item.color}
+          image={item.image}
+          toggleVisibility={toggleVisibility}
+          isFocusActive={focusState.active}
+          isFocused={
+            focusState.active && 
+            focusState.target.id === item.id && 
+            focusState.target.type === type
+          }
+        />
+      );
+    });
   }, [items, visibilityState, focusState, toggleVisibility, type]);
   
   return <>{renderedItems}</>;
@@ -45,6 +50,7 @@ const ViewsSection = ({
   focusState,       // État du mode focus
   initialExpanded = true // Si la section est initialement développée
 }) => {
+
   // État local pour l'expansion de la section
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const { t } = useTranslation();

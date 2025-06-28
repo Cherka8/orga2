@@ -41,6 +41,26 @@ const colorTranslationKeyMap = COLOR_PALETTE.reduce((map, color) => {
 }, {});
 
 /**
+ * Obtient le nom français d'une couleur à partir de son code hexadécimal.
+ * @param {string} hexColor - Le code hexadécimal de la couleur (ex: '#4f46e5').
+ * @returns {string} Le nom français de la couleur ou le code hexadécimal si non trouvé.
+ */
+export const getColorNameFromHex = (hexColor) => {
+  const color = COLOR_PALETTE.find(c => c.hex.toLowerCase() === hexColor?.toLowerCase());
+  return color ? color.name : hexColor;
+};
+
+/**
+ * Obtient le code hexadécimal d'une couleur à partir de son nom français.
+ * @param {string} colorName - Le nom français de la couleur (ex: 'Ambre').
+ * @returns {string} Le code hexadécimal de la couleur ou le nom si non trouvé.
+ */
+export const getHexFromColorName = (colorName) => {
+  const color = COLOR_PALETTE.find(c => c.name.toLowerCase() === colorName?.toLowerCase());
+  return color ? color.hex : colorName;
+};
+
+/**
  * Obtient le nom traduit d'une couleur à partir de son code hexadécimal.
  * @param {string} hexColor - Le code hexadécimal de la couleur (ex: '#4f46e5').
  * @param {function} t - La fonction de traduction i18next.
@@ -50,8 +70,7 @@ export const getColorName = (hexColor, t) => { // Accept t function
   if (!t) {
     console.warn("getColorName called without t function. Returning default name.");
     // Fallback to original behavior if t is not provided
-    const originalColor = COLOR_PALETTE.find(c => c.hex === hexColor?.toLowerCase());
-    return originalColor ? originalColor.name : hexColor; // Return original French name as fallback
+    return getColorNameFromHex(hexColor);
   }
   const translationKeyBase = colorTranslationKeyMap[hexColor?.toLowerCase()];
   if (translationKeyBase) {
@@ -62,9 +81,56 @@ export const getColorName = (hexColor, t) => { // Accept t function
 };
 
 /**
+ * Obtient le nom traduit d'une couleur à partir de son nom français.
+ * @param {string} colorName - Le nom français de la couleur (ex: 'Ambre').
+ * @param {function} t - La fonction de traduction i18next.
+ * @returns {string} Le nom traduit de la couleur ou le nom original si non trouvé.
+ */
+export const getTranslatedColorName = (colorName, t) => {
+  if (!t) {
+    return colorName; // Return original name if no translation function
+  }
+  
+  // Find the color in palette to get its hex code, then get translation key
+  const color = COLOR_PALETTE.find(c => c.name.toLowerCase() === colorName?.toLowerCase());
+  if (color) {
+    const translationKeyBase = colorTranslationKeyMap[color.hex.toLowerCase()];
+    if (translationKeyBase) {
+      return t(`colors.${translationKeyBase}`);
+    }
+  }
+  return colorName; // Return original name if not found
+};
+
+/**
  * Obtient la liste des codes hexadécimaux de la palette.
  * @returns {string[]} La liste des codes hexadécimaux.
  */
 export const getPaletteHexCodes = () => {
   return COLOR_PALETTE.map(color => color.hex);
+};
+
+/**
+ * Obtient la liste des noms français de la palette.
+ * @returns {string[]} La liste des noms français.
+ */
+export const getPaletteColorNames = () => {
+  return COLOR_PALETTE.map(color => color.name);
+};
+
+/**
+ * Vérifie si une couleur (nom ou hex) existe dans la palette.
+ * @param {string} color - Le nom français ou code hexadécimal de la couleur.
+ * @returns {boolean} True si la couleur existe dans la palette.
+ */
+export const isValidColor = (color) => {
+  if (!color) return false;
+  
+  // Check if it's a hex code
+  if (color.startsWith('#')) {
+    return COLOR_PALETTE.some(c => c.hex.toLowerCase() === color.toLowerCase());
+  }
+  
+  // Check if it's a color name
+  return COLOR_PALETTE.some(c => c.name.toLowerCase() === color.toLowerCase());
 };

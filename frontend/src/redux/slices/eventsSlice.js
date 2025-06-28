@@ -1,5 +1,6 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import eventService from '../../services/eventService';
+import { getHexFromColorName } from '../../utils/colorUtils';
 
 // État initial plus complet pour gérer les opérations asynchrones
 const initialState = {
@@ -19,13 +20,26 @@ export const fetchEvents = createAsyncThunk(
       const events = await eventService.getEvents(dateRange);
       // Le backend retourne startTime et endTime. On les mappe vers start et end.
       // On garde les dates comme des strings ISO pour la sérialisation.
-      return events.map(event => ({
-        ...event,
-        start: event.startTime,
-        end: event.endTime,
-        backgroundColor: event.eventColor,
-        borderColor: event.eventColor,
-      }));
+      return events.map(event => {
+        // Convertir le nom de couleur en code hex pour l'affichage
+        const displayColor = event.eventColor ? getHexFromColorName(event.eventColor) : '#3788d8';
+        
+        return {
+          ...event,
+          start: event.startTime,
+          end: event.endTime,
+          backgroundColor: displayColor,
+          borderColor: displayColor,
+          eventColor: event.eventColor, // Garder le nom de couleur pour le filtrage
+          extendedProps: {
+            ...event.extendedProps,
+            participants: event.participants || [],
+            presenterId: event.presenterId,
+            // Conserver toutes les autres propriétés étendues
+            ...event
+          }
+        };
+      });
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -52,13 +66,23 @@ export const fetchEventById = createAsyncThunk(
   async (eventId, { rejectWithValue }) => {
     try {
       const event = await eventService.getEventById(eventId);
+      // Convertir le nom de couleur en code hex pour l'affichage
+      const displayColor = event.eventColor ? getHexFromColorName(event.eventColor) : '#3788d8';
+      
       // Mapper les noms de champs pour la cohérence avec FullCalendar
       return {
         ...event,
         start: event.startTime,
         end: event.endTime,
-        backgroundColor: event.eventColor,
-        borderColor: event.eventColor,
+        backgroundColor: displayColor,
+        borderColor: displayColor,
+        eventColor: event.eventColor, // Garder le nom de couleur pour le filtrage
+        extendedProps: {
+          ...event.extendedProps,
+          participants: event.participants || [],
+          presenterId: event.presenterId,
+          ...event
+        }
       };
     } catch (error) {
       return rejectWithValue(error.message);
@@ -110,14 +134,24 @@ const eventsSlice = createSlice({
       .addCase(createEvent.fulfilled, (state, action) => {
         state.status = 'succeeded';
         if (action.payload) {
+          // Convertir le nom de couleur en code hex pour l'affichage
+          const displayColor = action.payload.eventColor ? getHexFromColorName(action.payload.eventColor) : '#3788d8';
+          
           // Le payload contient startTime et endTime du backend.
           // On le mappe vers start et end pour la cohérence dans le state, en gardant des strings.
           const newEvent = {
             ...action.payload,
             start: action.payload.startTime,
             end: action.payload.endTime,
-            backgroundColor: action.payload.eventColor,
-            borderColor: action.payload.eventColor,
+            backgroundColor: displayColor,
+            borderColor: displayColor,
+            eventColor: action.payload.eventColor, // Garder le nom de couleur pour le filtrage
+            extendedProps: {
+              ...action.payload.extendedProps,
+              participants: action.payload.participants || [],
+              presenterId: action.payload.presenterId,
+              ...action.payload
+            }
           };
           // Remplacer l'array pour garantir le re-render
           state.data = [...state.data, newEvent];
@@ -156,14 +190,18 @@ const eventsSlice = createSlice({
         const updatedEvent = action.payload;
         const index = state.data.findIndex(event => event.id === updatedEvent.id);
         if (index !== -1) {
+          // Convertir le nom de couleur en code hex pour l'affichage
+          const displayColor = updatedEvent.eventColor ? getHexFromColorName(updatedEvent.eventColor) : '#3788d8';
+          
           // Mapper les noms de champs pour la cohérence avec FullCalendar
           state.data[index] = {
             ...state.data[index], // Conserver les props non retournées par l'API si besoin
             ...updatedEvent,
             start: updatedEvent.startTime,
             end: updatedEvent.endTime,
-            backgroundColor: updatedEvent.eventColor,
-            borderColor: updatedEvent.eventColor,
+            backgroundColor: displayColor,
+            borderColor: displayColor,
+            eventColor: updatedEvent.eventColor, // Garder le nom de couleur pour le filtrage
           };
         }
       })
@@ -179,6 +217,52 @@ export const { setEvents } = eventsSlice.actions;
 export const selectEvents = (state) => state.events.data;
 export const selectEventsStatus = (state) => state.events.status;
 export const selectEventsError = (state) => state.events.error;
+
+// Sélecteur pour obtenir les événements filtrés en fonction de la visibilité
+const selectActorsVisibility = (state) => state.views.actors;
+const selectGroupsVisibility = (state) => state.views.groups;
+
+export const selectVisibleEvents = createSelector(
+  [selectEvents, selectActorsVisibility, selectGroupsVisibility],
+  (events, actorsVisibility, groupsVisibility) => {
+    // If visibility states aren't loaded, return all events to avoid showing an empty calendar initially.
+    if (Object.keys(actorsVisibility).length === 0 && Object.keys(groupsVisibility).length === 0) {
+      return events;
+    }
+
+    return events.filter(event => {
+      const participants = event.extendedProps?.participants || [];
+      const presenterId = event.extendedProps?.presenterId;
+
+      const involvedActorIds = new Set();
+      if (presenterId) {
+        involvedActorIds.add(presenterId);
+      }
+      participants.forEach(p => {
+        if (p.type === 'human' || p.type === 'object') {
+          involvedActorIds.add(p.id);
+        }
+      });
+
+      const involvedGroupIds = new Set();
+      participants.forEach(p => {
+        if (p.type === 'group') {
+          involvedGroupIds.add(p.id);
+        }
+      });
+
+      // An event is visible if (it has no associated actors OR at least one of them is visible)
+      // AND (it has no associated groups OR at least one of them is visible).
+      const actorsAreVisible = involvedActorIds.size === 0 || 
+        [...involvedActorIds].some(id => actorsVisibility[id] !== false);
+
+      const groupsAreVisible = involvedGroupIds.size === 0 || 
+        [...involvedGroupIds].some(id => groupsVisibility[id] !== false);
+
+      return actorsAreVisible && groupsAreVisible;
+    });
+  }
+);
 
 // Exporter le reducer
 export default eventsSlice.reducer;

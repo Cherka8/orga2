@@ -56,8 +56,8 @@ export class Event {
   @JoinColumn({ name: 'presenter_actor_id' })
   presenterActor: Actor | null; // Actor of type 'human'
 
-  @Column({ type: 'varchar', length: 7, nullable: true, name: 'event_color' })
-  eventColor: string | null;
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'event_color' })
+  eventColor: string | null; // Peut contenir un nom de couleur (ex: 'Ambre') ou un code hex (ex: '#f59e0b')
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

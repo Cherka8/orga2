@@ -1,12 +1,13 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository, LessThan, MoreThan } from 'typeorm';
+import { In, Repository, LessThan, MoreThan, DeepPartial } from 'typeorm';
 import { Event } from './entities/event.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventParticipant } from '../event-participant/entities/event-participant.entity';
 import { Actor } from '../actor/entities/actor.entity';
 import { Group } from '../group/entities/group.entity';
+import { getColorNameFromHex, getHexFromColorName, isValidColor } from '../utils/color.utils';
 
 @Injectable()
 export class EventService {
@@ -33,11 +34,17 @@ export class EventService {
       participant_ids 
     } = createEventDto;
 
+    // Convertir la couleur en nom si c'est un code hexadécimal
+    let processedColor = event_color;
+    if (event_color && event_color.startsWith('#')) {
+      processedColor = getColorNameFromHex(event_color);
+    }
+
     const newEventData = this.eventRepository.create({
       title,
       startTime: new Date(start),
       endTime: new Date(end),
-      eventColor: event_color,
+      eventColor: processedColor,
       description,
       account: { id: accountId },
       ...(location_actor_id && { locationActor: { id: location_actor_id } }),
@@ -139,7 +146,14 @@ export class EventService {
     // Manually map properties with different names
     if (start) event.startTime = new Date(start);
     if (end) event.endTime = new Date(end);
-    if (typeof event_color !== 'undefined') event.eventColor = event_color;
+    if (typeof event_color !== 'undefined') {
+      // Convertir la couleur en nom si c'est un code hexadécimal
+      let processedColor = event_color;
+      if (event_color && event_color.startsWith('#')) {
+        processedColor = getColorNameFromHex(event_color);
+      }
+      event.eventColor = processedColor;
+    }
 
     // 2. Handle presenter relation explicitly
     if (typeof presenter_actor_id !== 'undefined') {
@@ -175,32 +189,57 @@ export class EventService {
     const potentialActors = await this.actorRepository.find({
       where: { id: In(participantIds), account: { id: accountId } },
     });
-    const actorIds = new Set(potentialActors.map(a => a.id));
+    const directActorIds = new Set(potentialActors.map(a => a.id));
 
     const potentialGroups = await this.groupRepository.find({
       where: { id: In(participantIds), account: { id: accountId } },
       relations: ['members', 'members.actor'], // Load group members and their actor info
     });
+    const groupIds = new Set(potentialGroups.map(g => g.id));
 
-    // 3. Collect all unique actor IDs from direct actors and group members
+    // 3. Collect participant entities to save
+    const participantEntities: DeepPartial<EventParticipant>[] = [];
+
+    // 3a. Add direct actors (individually selected)
+    directActorIds.forEach(actorId => {
+      participantEntities.push(
+        this.eventParticipantRepository.create({
+          eventId: eventId,
+          actorId: actorId,
+          groupId: null,
+        })
+      );
+    });
+
+    // 3b. Add groups (and their members)
     potentialGroups.forEach(group => {
+      // Add the group itself as a participant
+      participantEntities.push(
+        this.eventParticipantRepository.create({
+          eventId: eventId,
+          actorId: null,
+          groupId: group.id,
+        })
+      );
+
+      // Add each member of the group as individual participants
       if (group.members) {
         group.members.forEach(member => {
-          if (member.actor) { // Ensure actor object is loaded
-            actorIds.add(member.actor.id);
+          if (member.actor) {
+            participantEntities.push(
+              this.eventParticipantRepository.create({
+                eventId: eventId,
+                actorId: member.actor.id,
+                groupId: group.id, // Link to the group they belong to
+              })
+            );
           }
         });
       }
     });
 
-    // 4. Create and save the new participant entries
-    if (actorIds.size > 0) {
-      const participantEntities = Array.from(actorIds).map(id => {
-        return this.eventParticipantRepository.create({
-          event: { id: eventId },
-          actor: { id: id },
-        });
-      });
+    // 4. Save all participant entries
+    if (participantEntities.length > 0) {
       await this.eventParticipantRepository.save(participantEntities);
     }
   }

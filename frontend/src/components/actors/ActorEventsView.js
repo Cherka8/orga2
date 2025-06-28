@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next'; 
 import { selectAllActors, ACTOR_TYPES } from '../../redux/slices/actorsSlice';
-import { selectEvents } from '../../redux/slices/eventsSlice';
+import { selectVisibleEvents } from '../../redux/slices/eventsSlice';
 import { selectGroupsByIdMap } from '../../redux/slices/groupsSlice';
 import SelectableActorList from './SelectableActorList';
 import ActorEventList from './ActorEventList';
@@ -10,7 +10,7 @@ import ActorEventList from './ActorEventList';
 const ActorEventsView = () => {
   const { t } = useTranslation(); 
   const allActors = useSelector(selectAllActors);
-  const allEvents = useSelector(selectEvents);
+    const allEvents = useSelector(selectVisibleEvents);
   const groupsById = useSelector(selectGroupsByIdMap);
 
   const humanActors = useMemo(() => 

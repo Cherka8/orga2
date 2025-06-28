@@ -2,8 +2,13 @@ import React, { useState, useRef, useEffect, useMemo, Suspense, lazy } from 'rea
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux'; // Assurer que useDispatch est importé
 import { store } from './redux/store';
-import { selectAllFilters } from './redux/slices/viewsSlice';
-import { setEvents as setEventsInStore, createEvent, fetchEvents, selectEvents } from './redux/slices/eventsSlice';
+import { 
+  selectAllFilters, 
+  updateVisibleViewItems
+} from './redux/slices/viewsSlice';
+import { setEvents as setEventsInStore, createEvent, fetchEvents, selectVisibleEvents, selectEvents } from './redux/slices/eventsSlice';
+import { selectAllActors, fetchActors } from './redux/slices/actorsSlice';
+import { selectAllGroups, fetchGroups } from './redux/slices/groupsSlice';
 import { useTranslation } from 'react-i18next'; // Import useTranslation
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -18,7 +23,6 @@ import TempEvent from './components/events/TempEvent';
 import { loadEventsFromLocalStorage, saveEventsToLocalStorage, removeEventFromLocalStorage } from './utils/storageUtils';
 // Importer les nouvelles fonctions et l'action
 import { 
-  extractViewFiltersFromEvents, 
   filterEventsByFocus, 
   filterEvents, 
   filterEventsByDateRange, // <-- Nouveau
@@ -26,13 +30,6 @@ import {
 } from './utils/viewsUtils';
 import { selectGroupsByIdMap } from './redux/slices/groupsSlice';
 import { selectIsAuthenticated } from './redux/slices/authSlice';
-import { 
-  initializeFilters, 
-  updateAvailableColors, 
-  updateAvailableActors, 
-  updateAvailableGroups, 
-  updateVisibleViewItems // <-- Nouveau
-} from './redux/slices/viewsSlice';
 import './styles/calendar-modern.css';
 import './styles/event-modal.css';
 import './styles/event-popover.css';
@@ -70,15 +67,145 @@ function AppContent() {
   const [currentView, setCurrentView] = useState('timeGridWeek');
   const calendarRef = useRef(null);
   const dispatch = useDispatch();
-  const eventsFromStore = useSelector(selectEvents);
+    const eventsFromStore = useSelector(selectEvents);
+  
+  // Get groups data from Redux (déclaré avant filteredEvents)
+  const groupsById = useSelector(selectGroupsByIdMap);
+  
+  // Récupérer les filtres de vue depuis le store Redux
+  const filters = useSelector(selectAllFilters);
+  const focus = useSelector(state => state.views.focus);
+  
+  // Filtrage stable des événements via useMemo
+  const filteredEvents = useMemo(() => {
+    const viewsState = filters;
+    console.log('🔍 [FILTRAGE] État des filtres:', viewsState);
+    console.log('🔍 [FOCUS] Mode focus actuel:', focus);
+    
+    if (!eventsFromStore || eventsFromStore.length === 0) return [];
+    
+    // Si aucun filtre n'est défini, retourner tous les événements
+    if (Object.keys(viewsState.actors).length === 0 && Object.keys(viewsState.groups).length === 0) {
+      console.log('🔍 [FILTRAGE] Aucun filtre défini, retour de tous les événements');
+      return eventsFromStore;
+    }
+    
+    console.log('🔍 [FILTRAGE] Filtrage de', eventsFromStore.length, 'événements');
+    
+    // Log de la structure des événements bruts
+    if (eventsFromStore.length > 0) {
+      console.log('🔍 [STRUCTURE] Premier événement brut:', eventsFromStore[0]);
+      console.log('🔍 [STRUCTURE] extendedProps:', eventsFromStore[0].extendedProps);
+      console.log('🔍 [STRUCTURE] participants détaillés:', eventsFromStore[0].extendedProps?.participants);
+      if (eventsFromStore[0].extendedProps?.participants?.length > 0) {
+        console.log('🔍 [STRUCTURE] Premier participant:', eventsFromStore[0].extendedProps.participants[0]);
+      }
+    }
+    
+    const filtered = eventsFromStore.filter(event => {
+      const participants = event.extendedProps?.participants || [];
+      const presenterId = event.extendedProps?.presenterId;
+      
+      // Vérifier les acteurs
+      const involvedActorIds = new Set();
+      if (presenterId) involvedActorIds.add(presenterId);
+      participants.forEach(p => {
+        // La structure réelle utilise actorId, pas p.id avec p.type
+        if (p.actorId) {
+          involvedActorIds.add(p.actorId);
+        }
+      });
+      
+      // Vérifier les groupes
+      const involvedGroupIds = new Set();
+      participants.forEach(p => {
+        // La structure réelle utilise groupId, pas p.id avec p.type
+        if (p.groupId) {
+          involvedGroupIds.add(p.groupId);
+        }
+      });
+      
+      // FOCUS MODE: Si un élément est en focus, ne montrer que les événements liés à cet élément
+      if (focus) {
+        console.log('🔍 [FOCUS] État focus complet:', focus);
+        console.log('🔍 [FOCUS] focus.targetType:', focus.targetType, 'focus.targetId:', focus.targetId);
+        
+        const focusedActorId = focus.targetType === 'actor' ? focus.targetId : null;
+        const focusedGroupId = focus.targetType === 'group' ? focus.targetId : null;
+        const focusedColorName = focus.targetType === 'color' ? focus.targetId : null;
+        
+        console.log('🔍 [FOCUS] focusedActorId:', focusedActorId, 'focusedGroupId:', focusedGroupId, 'focusedColorName:', focusedColorName);
+        
+        if (focusedActorId) {
+          // Mode focus acteur: l'événement doit impliquer cet acteur
+          const isInvolvedInEvent = involvedActorIds.has(focusedActorId);
+          console.log('🔍 [FOCUS] Acteur', focusedActorId, 'impliqué dans', event.title, ':', isInvolvedInEvent);
+          console.log('🔍 [FOCUS] involvedActorIds:', Array.from(involvedActorIds));
+          if (!isInvolvedInEvent) {
+            return false;
+          }
+        }
+        
+        if (focusedGroupId) {
+          // Mode focus groupe: l'événement doit impliquer ce groupe
+          const isInvolvedInEvent = involvedGroupIds.has(focusedGroupId);
+          console.log('🔍 [FOCUS] Groupe', focusedGroupId, 'impliqué dans', event.title, ':', isInvolvedInEvent);
+          console.log('🔍 [FOCUS] involvedGroupIds:', Array.from(involvedGroupIds));
+          console.log('🔍 [FOCUS] participants détaillés:', participants);
+          if (!isInvolvedInEvent) {
+            return false;
+          }
+        }
+        
+        if (focusedColorName) {
+          // Mode focus couleur: l'événement doit avoir cette couleur
+          const eventColorName = event.eventColor;
+          const isMatchingColor = eventColorName === focusedColorName;
+          console.log('🎯 [FOCUS] Couleur', focusedColorName, 'match avec', event.title, '(', eventColorName, '):', isMatchingColor);
+          if (!isMatchingColor) {
+            return false;
+          }
+        }
+      }
+      
+      // Filtrage par visibilité (acteurs, groupes ET couleurs)
+      const actorsAreVisible = involvedActorIds.size === 0 || 
+        [...involvedActorIds].some(id => viewsState.actors[id] !== false);
+      const groupsAreVisible = involvedGroupIds.size === 0 || 
+        [...involvedGroupIds].some(id => viewsState.groups[id] !== false);
+      
+      // Vérifier la visibilité de la couleur
+      const eventColorName = event.eventColor;
+      const colorIsVisible = !eventColorName || viewsState.colors[eventColorName] !== false;
+      
+      console.log('🎨 [COLOR] Event:', event.title, 'eventColor:', eventColorName, 'colorIsVisible:', colorIsVisible);
+      console.log('🎨 [COLOR] viewsState.colors:', viewsState.colors);
+      
+      const isVisible = actorsAreVisible && groupsAreVisible && colorIsVisible;
+      
+      // Log détaillé pour chaque événement
+      console.log('🔍 [EVENT]', event.title, ':', {
+        involvedActorIds: Array.from(involvedActorIds),
+        involvedGroupIds: Array.from(involvedGroupIds),
+        eventColor: eventColorName,
+        actorsAreVisible,
+        groupsAreVisible,
+        colorIsVisible,
+        isVisible,
+        presenterId,
+        participants,
+        focus
+      });
+      
+      return isVisible;
+    });
+    
+    console.log('🔍 [FILTRAGE] Résultat:', filtered.length, 'événements visibles sur', eventsFromStore.length);
+    return filtered;
+  }, [eventsFromStore, filters, focus]);
+  
   const [sidebarWidth, setSidebarWidth] = useState(300); // Initial width
   const [sidebarOpen, setSidebarOpen] = useState(true); // État pour la sidebar
-
-  // Get filters from Redux
-  const filters = useSelector(selectAllFilters);
-  
-  // Get groups data from Redux
-  const groupsById = useSelector(selectGroupsByIdMap);
 
   // State for event modal
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -111,9 +238,7 @@ function AppContent() {
   const slotMinTime = useSelector(state => state.calendarSettings?.slotMinTime || '09:00:00');
   const slotMaxTime = useSelector(state => state.calendarSettings?.slotMaxTime || '17:00:00');
 
-  // Récupérer les filtres de vue depuis le store Redux
-  const viewFilters = useSelector(selectAllFilters);
-  const focus = useSelector(state => state.views.focus);
+  // Les filtres sont maintenant déclarés plus haut
   
   // Add a useEffect to update the title when the language changes
   useEffect(() => {
@@ -122,25 +247,10 @@ function AppContent() {
     }
   }, [i18n.language]); // Re-run when language changes
 
-  // Initialiser les filtres de vue à partir des événements
-  useEffect(() => {
-    if (eventsFromStore.length > 0) {
-      const { actors, groups, colors } = extractViewFiltersFromEvents(eventsFromStore, groupsById);
-      
-      // Initialiser les filtres pour les acteurs, groupes et couleurs
-      dispatch(initializeFilters({ actors, groups, colors }));
-      
-      // Mettre à jour les éléments disponibles (pour supprimer ceux qui ne sont plus utilisés)
-      dispatch(updateAvailableActors({ actors }));
-      dispatch(updateAvailableGroups({ groups }));
-      dispatch(updateAvailableColors({ colors }));
-    } else {
-      // Si aucun événement, mettre à jour avec des tableaux vides
-      dispatch(updateAvailableActors({ actors: [] }));
-      dispatch(updateAvailableGroups({ groups: [] }));
-      dispatch(updateAvailableColors({ colors: [] }));
-    }
-  }, [eventsFromStore, dispatch, groupsById]);
+  // SUPPRIMÉ: useEffect qui interfère avec le filtrage dynamique des couleurs
+  // Ce useEffect appelait updateAvailableColors avec TOUTES les couleurs de TOUS les événements,
+  // ce qui écrasait le filtrage dynamique fait par le callback datesSet.
+  // Le filtrage dynamique dans datesSet est maintenant la seule source de vérité pour les couleurs visibles.
 
   // Filtrer les événements en fonction des filtres actifs
 
@@ -412,9 +522,46 @@ function AppContent() {
   };
 
   useEffect(() => {
-    // Charger les événements depuis le backend
+    // console.log('🚀 [App.js] useEffect de chargement initial déclenché');
     dispatch(fetchEvents());
+    dispatch(fetchActors({}));
+    dispatch(fetchGroups());
+    // console.log('📦 [App.js] Dispatches de chargement des données envoyés');
   }, [dispatch]);
+
+  // Synchronisation des acteurs et groupes vers le slice 'views'
+  const allActors = useSelector(selectAllActors);
+  const allGroups = useSelector(selectAllGroups);
+
+  // Ce log va s'exécuter à chaque rendu pour voir les données reçues
+  // console.log(`[App.js RENDER] Données reçues - Acteurs: ${allActors.length}, Groupes: ${allGroups.length}`);
+
+  // ❌ DÉSACTIVÉ - Ce useEffect synchronisait avec TOUS les acteurs de la base de données
+  // ce qui ajoutait des acteurs non-humains (comme les lieux) au ViewsPanel
+  // Maintenant on utilise seulement extractItemsFromEvents pour ne garder que les acteurs des événements
+  /*
+  useEffect(() => {
+    // console.log(`[App.js EFFECT] Le useEffect de synchronisation est déclenché. Acteurs: ${allActors.length}, Groupes: ${allGroups.length}`);
+
+    // On ne met à jour que si les données sont effectivement chargées
+    // pour éviter de dispatcher un payload vide après le montage initial.
+    if (allActors.length > 0 || allGroups.length > 0) {
+      const actorIds = allActors.map(actor => actor.id);
+      const groupIds = allGroups.map(group => group.id);
+      
+      const payload = {
+        actors: actorIds,
+        groups: groupIds,
+        colors: []
+      };
+      
+      // console.log('[App.js EFFECT] Dispatch de updateVisibleViewItems avec le payload:', payload);
+      dispatch(updateVisibleViewItems(payload));
+    } else {
+      // console.log('[App.js EFFECT] Pas de données à synchroniser, le dispatch est ignoré.');
+    }
+  }, [dispatch, allActors, allGroups]);
+  */
 
   useEffect(() => {
     if (calendarRef.current && calendarRef.current.getApi()) {
@@ -423,9 +570,45 @@ function AppContent() {
       // Set initial calendar title
       updateCalendarTitle(calendarApi);
       
-      // Add event listeners for title updates
-      calendarApi.on('datesSet', () => {
+      // Add event listeners for title updates and ViewsPanel filtering
+      calendarApi.on('datesSet', (dateInfo) => {
+        console.log('🚨 [DATES_SET] CALLBACK EXÉCUTÉ!');
         updateCalendarTitle(calendarApi);
+        
+        // Filtrer les éléments du ViewsPanel selon la période visible
+        if (eventsFromStore && eventsFromStore.length > 0) {
+          console.log('📅 [DATES_SET] Vue changée:', {
+            start: dateInfo.start,
+            end: dateInfo.end,
+            view: dateInfo.view.type
+          });
+          
+          // Filtrer les événements par la période visible
+          const visibleEvents = filterEventsByDateRange(eventsFromStore, dateInfo.start, dateInfo.end);
+          console.log('📅 [DATES_SET] Événements visibles:', visibleEvents.length, '/', eventsFromStore.length);
+          
+          // Extraire les acteurs, groupes, couleurs des événements visibles
+          const { actors, groups, colors } = extractItemsFromEvents(visibleEvents, groupsById);
+          
+          console.log('📅 [DATES_SET] Éléments extraits de la vue:', {
+            actors: Array.from(actors),
+            groups: Array.from(groups),
+            colors: Array.from(colors)
+          });
+          
+          console.log('🎨 [DATES_SET] Détail des couleurs trouvées:', {
+            colorsCount: colors.size,
+            colorsList: Array.from(colors),
+            visibleEventsWithColors: visibleEvents.map(e => ({ id: e.id, title: e.title, eventColor: e.eventColor || e.extendedProps?.eventColor }))
+          });
+          
+          // Mettre à jour le ViewsPanel avec les éléments de la vue courante
+          dispatch(updateVisibleViewItems({
+            actors: Array.from(actors),
+            groups: Array.from(groups),
+            colors: Array.from(colors)
+          }));
+        }
       });
       
       return () => {
@@ -433,7 +616,7 @@ function AppContent() {
         calendarApi.off('datesSet');
       };
     }
-  }, [currentView]);
+  }, [currentView, eventsFromStore, groupsById, dispatch]);
 
   useEffect(() => {
     if (calendarRef.current && calendarRef.current.getApi()) {
@@ -441,6 +624,47 @@ function AppContent() {
       calendarApi.changeView(currentView);
     }
   }, [currentView]);
+
+  // FALLBACK: Synchronisation initiale des filtres ViewsPanel si le calendrier n'est pas encore prêt
+  // Ce useEffect ne doit s'exécuter qu'une seule fois au premier chargement pour éviter d'écraser le filtrage dynamique
+  // TEMPORAIREMENT DÉSACTIVÉ POUR TESTER
+  useEffect(() => {
+    console.log('🚨 [FALLBACK] useEffect de fallback DÉSACTIVÉ temporairement');
+    return; // Désactiver temporairement
+    // Ne s'exécuter que si le calendrier n'est pas encore initialisé ET que c'est le premier chargement
+    const isCalendarReady = calendarRef.current && calendarRef.current.getApi();
+    
+    console.log('🔍 [FALLBACK] useEffect déclenché - Calendar ready:', isCalendarReady);
+    console.log('🔍 [FALLBACK] eventsFromStore.length:', eventsFromStore?.length);
+    
+    // Condition plus stricte : seulement si le calendrier n'est pas prêt ET qu'on a des événements pour la première fois
+    if (!isCalendarReady && eventsFromStore && eventsFromStore.length > 0) {
+      console.log('⚠️ [FALLBACK] ATTENTION: Le useEffect de fallback s\'exécute encore!');
+      console.log('📅 [FALLBACK] Synchronisation initiale avant calendrier prêt');
+      
+      // Extraire les acteurs, groupes, couleurs de TOUS les événements comme fallback
+      const { actors, groups, colors } = extractItemsFromEvents(eventsFromStore, groupsById);
+      
+      console.log('🔄 [FALLBACK] ViewsPanel synchronisé (tous événements):', {
+        eventsCount: eventsFromStore.length,
+        actors: Array.from(actors),
+        groups: Array.from(groups),
+        colors: Array.from(colors)
+      });
+      
+      console.log('🚨 [FALLBACK] DISPATCH updateVisibleViewItems avec TOUTES les couleurs!');
+      dispatch(updateVisibleViewItems({
+        actors: Array.from(actors),
+        groups: Array.from(groups),
+        colors: Array.from(colors)
+      }));
+    } else {
+      console.log('✅ [FALLBACK] useEffect de fallback ignoré:', {
+        isCalendarReady,
+        hasEvents: eventsFromStore && eventsFromStore.length > 0
+      });
+    }
+  }, [dispatch, groupsById]); // Retirer eventsFromStore des dépendances pour éviter les re-exécutions
 
   // Fonction pour synchroniser l'état local avec les événements du calendrier
 
@@ -941,21 +1165,7 @@ function AppContent() {
     return <TempEvent eventInfo={eventInfo} />;
   };
 
-  // Filter events based on the current filters
-  const filteredEvents = useMemo(() => {
-    // If no events are loaded, return an empty array
-    if (!eventsFromStore) {
-      return [];
-    }
-
-    // Apply focus filter first
-    const focusFiltered = filterEventsByFocus(eventsFromStore, filters.focus, groupsById);
-    
-    // Then apply the general filters
-    return filterEvents(focusFiltered, filters);
-  }, [eventsFromStore, filters, groupsById]);
-
-  // Convert event dates from string to Date objects for FullCalendar
+  // Conversion des dates pour FullCalendar et gestion des événements temporaires
   const calendarEvents = useMemo(() => {
     const baseEvents = filteredEvents ? filteredEvents.map(event => ({
       ...event,
@@ -1067,7 +1277,7 @@ function AppContent() {
                         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                         initialView={currentView}
                         headerToolbar={false}
-                        events={calendarEvents}
+                        events={filteredEvents}
                         dateClick={handleDateClick}
                         eventClick={handleEventClick}
                         eventChange={handleEventChange}
@@ -1093,42 +1303,19 @@ function AppContent() {
                         }}
                         eventContent={renderEventContent}
                         datesSet={(dateInfo) => {
-                          // Garder le code existant pour la mise à jour du titre
+                          // 1. Fetch events en premier (CRITIQUE pour avoir les données)
+                          dispatch(fetchEvents({ start: dateInfo.startStr, end: dateInfo.endStr }));
+                          
+                          // 2. Mise à jour du titre du calendrier
                           if (calendarRef.current) {
                             const calendarApi = calendarRef.current.getApi();
                             if (calendarApi) {
-                              // 1. Mettre à jour le titre (existant)
                               updateCalendarTitle(calendarApi);
-
-                              // --- DEBUT AJOUT --- 
-                              // 2. Mettre à jour les éléments visibles dans ViewsPanel
-                              const viewStartDate = calendarApi.view.activeStart;
-                              const viewEndDate = calendarApi.view.activeEnd; // Est exclusif
                               
-                              // Filtrer les événements locaux par la plage de dates actuelle
-                              // 'eventsFromStore' est la state variable contenant la liste complète
-                              const eventsInView = filterEventsByDateRange(eventsFromStore, viewStartDate, viewEndDate);
-                              
-                              // Extraire les acteurs, groupes, couleurs uniques des événements visibles
-                              // 'groupsById' est déjà récupéré via useSelector plus haut
-                              const { 
-                                actors: visibleActorsSet, 
-                                groups: visibleGroupsSet, 
-                                colors: visibleColorsSet 
-                              } = extractItemsFromEvents(eventsInView, groupsById);
-                              
-                              // Dispatcher l'action pour mettre à jour le state de viewsSlice
-                              dispatch(updateVisibleViewItems({
-                                actors: Array.from(visibleActorsSet),
-                                groups: Array.from(visibleGroupsSet),
-                                colors: Array.from(visibleColorsSet)
-                              }));
-                              // --- FIN AJOUT ---
+                              // NOTE: La synchronisation ViewsPanel se fera automatiquement
+                              // via le useEffect qui écoute eventsFromStore (voir ÉTAPE 2)
                             }
                           }
-                        }}
-                                                datesSet={(dateInfo) => {
-                          dispatch(fetchEvents({ start: dateInfo.startStr, end: dateInfo.endStr }));
                         }}
                         dayHeaderContent={({ date }) => {
                           const day = date.getDate();

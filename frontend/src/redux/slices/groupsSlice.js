@@ -7,9 +7,13 @@ export const fetchGroups = createAsyncThunk(
   'groups/fetchGroups',
   async (_, { rejectWithValue }) => {
     try {
+      console.log('🚀 [groupsSlice] fetchGroups déclenché');
       const groups = await groupService.getGroups();
+      console.log('📦 [groupsSlice] fetchGroups response:', groups);
+      console.log('👥 [groupsSlice] Nombre de groupes reçus:', groups?.length || 0);
       return groups;
     } catch (error) {
+      console.error('❌ [groupsSlice] fetchGroups error:', error);
       return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
@@ -101,6 +105,7 @@ const groupsSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchGroups.fulfilled, (state, action) => {
+        console.log('✅ [groupsSlice] fetchGroups.fulfilled - payload:', action.payload);
         state.loading = false;
         state.byId = {};
         state.allIds = [];
@@ -109,6 +114,9 @@ const groupsSlice = createSlice({
           state.byId[group.id] = group;
           state.allIds.push(group.id);
         });
+        
+        console.log('👥 [groupsSlice] Groupes stockés dans state.byId:', Object.keys(state.byId));
+        console.log('👥 [groupsSlice] state.allIds:', state.allIds);
       })
       .addCase(fetchGroups.rejected, (state, action) => {
         state.loading = false;

@@ -1,61 +1,52 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import classNames from 'classnames';
 import { activateFocus } from '../../redux/slices/viewsSlice';
 import { getColorName } from '../../utils/colorUtils';
 
 /**
- * Composant représentant un élément filtrable dans le panneau Views
- * Affiche un nom, une icône de visibilité (œil) et gère les interactions
+ * Composant représentant un élément filtrable dans le panneau Views.
  */
 const ViewItem = ({ 
-  id,               // ID unique de l'élément
-  name,             // Nom à afficher
-  type,             // Type d'élément ('actor', 'group', 'color')
-  isVisible,        // Si l'élément est visible ou non
-  color,            // Couleur à afficher (pour les éléments de type 'color')
-  image,            // URL de l'image (pour les acteurs et groupes)
-  toggleVisibility, // Fonction pour basculer la visibilité
-  isFocusActive,    // Si le mode focus est actif
-  isFocused         // Si cet élément est actuellement en focus
+  id,
+  name,
+  type,
+  isVisible,
+  color,
+  image,
+  toggleVisibility,
+  isFocusActive,
+  isFocused
 }) => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
 
-  // Pour les couleurs, on veut afficher le nom de la couleur au lieu du code hex
   const displayName = type === 'color' ? getColorName(name, t) : name;
 
-
-
-  // Gérer le clic sur l'élément (pour activer le focus)
-  const handleItemClick = (e) => {
-    // Éviter de déclencher si on clique sur l'icône de visibilité
-    if (e.target.closest('.view-item-visibility')) return;
-    
-    // S'assurer que l'ID et le type sont définis avant d'activer le focus
-    if (id && type) {
-      dispatch(activateFocus({ id, type }));
-    }
-  };
-
-  // Gérer le clic sur l'icône de visibilité
   const handleVisibilityToggle = (e) => {
     e.stopPropagation();
-    console.log('ViewItem - handleVisibilityToggle called for:', { id, type, isVisible });
-    if (typeof toggleVisibility === 'function' && id) {
-      console.log('ViewItem - Calling toggleVisibility with id:', id);
-      toggleVisibility(id);
-    }
+
+    toggleVisibility(id);
   };
 
+  const handleFocus = (e) => {
+    e.stopPropagation();
+    dispatch(activateFocus({ id, type }));
+  };
 
+  const itemClasses = classNames(
+    'view-item',
+    { 'is-focused': isFocused },
+    { 'is-focus-active': isFocusActive },
+    { 'is-hidden': !isVisible }
+  );
 
   return (
     <div 
-      className={`view-item ${!isVisible ? 'view-item-hidden' : ''} ${isFocused ? 'view-item-focused' : ''}`}
-      onClick={handleItemClick}
+      className={itemClasses}
+      onClick={handleFocus}
     >
-      {/* Indicateur de couleur ou image */}
       <div className="view-item-indicator">
         {type === 'color' && color ? (
           <div 
@@ -72,14 +63,10 @@ const ViewItem = ({
         )}
       </div>
       
-      {/* Nom de l'élément */}
       <div className="view-item-name">
         {displayName || t('viewItem.fallbackName')} 
       </div>
       
-
-      
-      {/* Icône Visibilité (Oeil) - Maintenant à droite */}
       <div 
         className="view-item-visibility"
         onClick={handleVisibilityToggle}

@@ -19,6 +19,7 @@ import { EventParticipantModule } from './event-participant/event-participant.mo
 import { GroupModule } from './group/group.module';
 import { GroupMemberModule } from './group-member/group-member.module';
 import { SharedCalendarAccessTokenModule } from './shared-calendar-access-token/shared-calendar-access-token.module';
+import { ColorModule } from './color/color.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { SharedCalendarAccessTokenModule } from './shared-calendar-access-token/
     GroupModule,
     GroupMemberModule,
     SharedCalendarAccessTokenModule,
+    ColorModule,
   ],
   controllers: [AppController],
   providers: [AppService],

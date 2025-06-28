@@ -28,10 +28,10 @@ export class EventParticipant {
   eventId: number;
 
   @Column({ name: 'actor_id', type: 'int', nullable: true })
-  actorId: number;
+  actorId: number | null;
 
   @Column({ name: 'group_id', type: 'int', nullable: true })
-  groupId: number;
+  groupId: number | null;
 
   @ManyToOne(() => Event, (event) => event.participants, {
     onDelete: 'CASCADE',

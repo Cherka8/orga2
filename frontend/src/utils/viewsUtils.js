@@ -17,12 +17,14 @@ export const extractViewFiltersFromEvents = (events, groupsById = {}) => {
   const colors = new Set();
 
   events.forEach(event => {
-    // Extraction des couleurs
-    if (event.borderColor) {
-      colors.add(event.borderColor);
-    }
-    if (event.backgroundColor && event.backgroundColor !== event.borderColor) {
-      colors.add(event.backgroundColor);
+    // DEBUG: Logs pour voir les couleurs extraites
+    console.log('🎨 [extractViewFiltersFromEvents] Event:', event.title || event.id);
+    console.log('  - event.eventColor:', event.eventColor);
+    
+    // Extraction des couleurs (utiliser eventColor qui contient le nom français)
+    if (event.eventColor) {
+      colors.add(event.eventColor);
+      console.log('  - Couleur ajoutée:', event.eventColor);
     }
 
     // Extraction des participants (acteurs et groupes)
@@ -54,11 +56,16 @@ export const extractViewFiltersFromEvents = (events, groupsById = {}) => {
     }
   });
 
-  return {
+  const result = {
     actors: Array.from(actors),
     groups: Array.from(groups),
     colors: Array.from(colors)
   };
+  
+  console.log('🎨 [extractViewFiltersFromEvents] Résultat final:');
+  console.log('  - Couleurs extraites:', result.colors);
+  
+  return result;
 };
 
 /**
@@ -101,8 +108,11 @@ export const filterEventsByFocus = (events, focus, groupsById = {}) => {
     }
     
     if (focus.targetType === 'color') {
-      return event.backgroundColor === focus.targetId || 
-             event.borderColor === focus.targetId;
+      console.log('🎯 [filterEventsByFocus] Focus couleur - Event:', event.title || event.id);
+      console.log('  - event.eventColor:', event.eventColor);
+      console.log('  - focus.targetId:', focus.targetId);
+      console.log('  - Match:', event.eventColor === focus.targetId);
+      return event.eventColor === focus.targetId;
     }
     
     return false;
@@ -131,9 +141,20 @@ export const filterEvents = (events, filters, groupsById = {}) => {
 export const isEventVisible = (event, filters, groupsById = {}) => {
   const { actors, groups, colors } = filters;
 
+  // DEBUG: Logs pour diagnostiquer le problème des couleurs
+  console.log('🔍 [isEventVisible] Event:', event.title || event.id);
+  console.log('  - event.eventColor:', event.eventColor);
+  console.log('  - event.extendedProps?.eventColor:', event.extendedProps?.eventColor);
+  console.log('  - colors filters:', colors);
+
   // Vérifier la visibilité basée sur la couleur de l'événement
-  const eventColor = event.borderColor || event.backgroundColor;
-  if (eventColor && colors[eventColor] === false) {
+  // Utiliser eventColor (nom français) plutôt que backgroundColor/borderColor (hex)
+  const eventColorName = event.eventColor || event.extendedProps?.eventColor;
+  console.log('  - eventColorName déterminé:', eventColorName);
+  console.log('  - colors[eventColorName]:', colors[eventColorName]);
+  
+  if (eventColorName && colors[eventColorName] === false) {
+    console.log('  - ❌ Événement caché par filtre couleur');
     return false;
   }
   
@@ -240,32 +261,34 @@ export const extractItemsFromEvents = (eventsInView, groupsById) => {
 
   eventsInView.forEach(event => {
     // 1. Extraire la couleur de l'événement
-    if (event.eventColor) {
-      colors.add(event.eventColor);
+    const eventColorName = event.eventColor || event.extendedProps?.eventColor;
+    if (eventColorName) {
+      colors.add(eventColorName);
     }
 
-    // 2. Extraire le présentateur (presenterActor)
-    if (event.presenterActor && event.presenterActor.id) {
+    // 2. Extraire le présentateur (presenterActor) - seulement si c'est un humain
+    if (event.presenterActor && event.presenterActor.id && event.presenterActor.type === 'human') {
       actors.add(event.presenterActor.id);
     }
 
-    // 3. Extraire le lieu (locationActor)
-    if (event.locationActor && event.locationActor.id) {
-      actors.add(event.locationActor.id);
-    }
-
+    // 3. Extraire le lieu (locationActor) - NE PAS l'ajouter aux acteurs car c'est un lieu
+    // Les lieux ne doivent pas apparaître dans le ViewsPanel des acteurs
+    
     // 4. Extraire les participants (acteurs et groupes)
     if (Array.isArray(event.participants)) {
       event.participants.forEach(p => {
-        if (p.actor && p.actor.id) {
+        if (p.actor && p.actor.id && p.actor.type === 'human') {
           actors.add(p.actor.id);
         }
+        
         if (p.group && p.group.id) {
           groups.add(p.group.id);
         }
       });
     }
   });
+
+
 
   return { actors, groups, colors };
 };

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import ViewsSection from './ViewsSection';
@@ -15,26 +15,28 @@ import {
 } from '../../redux/slices/viewsSlice';
 import { ACTOR_TYPES, selectActorsByIdMap } from '../../redux/slices/actorsSlice';
 import { selectGroupsByIdMap } from '../../redux/slices/groupsSlice';
+import { getColorName, getColorNameFromHex, getHexFromColorName } from '../../utils/colorUtils';
 
 /**
  * Composant principal du panneau Views
  * Affiche les trois sections (Acteurs, Groupes, Couleurs) et gère le mode focus
  */
 const ViewsPanel = () => {
+
   const { t } = useTranslation();
   const dispatch = useDispatch();
   
   // État pour le terme de recherche des acteurs
   const [actorSearchTerm, setActorSearchTerm] = useState('');
 
-  // Récupérer l'état de visibilité depuis le store
+  // Récupérer l'état de visibilité depuis les sélecteurs
   const actorsVisibility = useSelector(selectAllVisibleActors);
   const groupsVisibility = useSelector(selectAllVisibleGroups);
   const colorsVisibility = useSelector(selectAllVisibleColors);
+  const actorsById = useSelector(selectActorsByIdMap);
+  const groupsById = useSelector(selectGroupsByIdMap);
   
-  // Récupérer les données des acteurs et groupes depuis le store
-  const actorsData = useSelector(selectActorsByIdMap);
-  const groupsData = useSelector(selectGroupsByIdMap);
+
   
   // Récupérer l'état du mode focus
   const focusActive = useSelector(selectFocusActive);
@@ -61,7 +63,43 @@ const ViewsPanel = () => {
     if (!participant) return null;
     
     // Vérifier les différentes propriétés possibles pour les images
-    return participant.photo || participant.image || participant.profilePicture || participant.avatar || null;
+    // photoUrl est la propriété principale utilisée par les acteurs
+    const imageUrl = participant.photoUrl || participant.photo || participant.image || participant.profilePicture || participant.avatar;
+    
+    // Si on a une URL d'image, construire l'URL complète
+    if (imageUrl) {
+      // Si l'URL commence par '/', c'est une URL relative - ajouter l'URL de base du serveur
+      if (imageUrl.startsWith('/')) {
+        const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+        return `${baseUrl}${imageUrl}`;
+      }
+      // Sinon, retourner l'URL telle quelle (URL absolue)
+      return imageUrl;
+    }
+    
+    return null;
+  }, []);
+
+  // Fonction utilitaire pour récupérer l'avatar d'un groupe
+  const getGroupAvatar = useCallback((group) => {
+    if (!group) return null;
+    
+    // Vérifier les différentes propriétés possibles pour les images
+    // image est la propriété principale utilisée par les groupes
+    const imageUrl = group.image || group.photo || group.photoUrl || group.profilePicture || group.avatar;
+    
+    // Si on a une URL d'image, construire l'URL complète
+    if (imageUrl) {
+      // Si l'URL commence par '/', c'est une URL relative - ajouter l'URL de base du serveur
+      if (imageUrl.startsWith('/')) {
+        const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+        return `${baseUrl}${imageUrl}`;
+      }
+      // Sinon, retourner l'URL telle quelle (URL absolue)
+      return imageUrl;
+    }
+    
+    return null;
   }, []);
 
   // Préparer les éléments pour la section Acteurs en utilisant les IDs des filtres de visibilité
@@ -69,7 +107,8 @@ const ViewsPanel = () => {
   const actorItems = useMemo(() => {
     // Créer la liste complète des acteurs
     const allActorItems = Object.keys(actorsVisibility).map(actorId => {
-      const actor = actorsData[actorId];
+      const actor = actorsById[actorId];
+
       
       if (!actor) {
         return {
@@ -80,11 +119,13 @@ const ViewsPanel = () => {
       }
       
       return {
-        id: actorId,
+        id: Number(actorId),
         name: formatActorName(actor),
         image: getActorAvatar(actor)
       };
     });
+
+
 
     // Filtrer les acteurs si un terme de recherche est présent
     if (actorSearchTerm.trim() === '') {
@@ -92,16 +133,20 @@ const ViewsPanel = () => {
     }
     
     // Filtrer par nom d'acteur (insensible à la casse)
-    return allActorItems.filter(actor => 
+    const filteredItems = allActorItems.filter(actor => 
       actor.name.toLowerCase().includes(actorSearchTerm.toLowerCase())
     );
-  }, [actorsVisibility, actorsData, formatActorName, getActorAvatar, t, actorSearchTerm]);
+    console.log(' [ViewsPanel] actorItems filtrés:', filteredItems);
+    return filteredItems;
+  }, [actorsVisibility, actorsById, formatActorName, getActorAvatar, t, actorSearchTerm]);
 
   // Préparer les éléments pour la section Groupes en utilisant les IDs des filtres de visibilité
   // et les informations récupérées depuis le store groupes (groupsData)
   const groupItems = useMemo(() => {
-    return Object.keys(groupsVisibility).map(groupId => {
-      const group = groupsData[groupId];
+    // console.log(' [ViewsPanel] Création groupItems avec groupsVisibility:', groupsVisibility);
+    const allGroupItems = Object.keys(groupsVisibility).map(groupId => {
+      const group = groupsById[groupId];
+      // console.log(` [ViewsPanel] Group ${groupId}:`, group);
       
       if (!group) {
         return {
@@ -112,60 +157,48 @@ const ViewsPanel = () => {
       }
       
       return {
-        id: groupId,
+        id: Number(groupId),
         name: group.name,
-        image: group.image
+        image: getGroupAvatar(group)
       };
     });
-  }, [groupsVisibility, groupsData, t]);
+    // console.log(' [ViewsPanel] allGroupItems créés:', allGroupItems);
+    return allGroupItems;
+  }, [groupsVisibility, groupsById, getGroupAvatar, t]);
 
   // Extraire les couleurs des filtres de visibilité
   const colorItems = useMemo(() => {
-    return Object.keys(colorsVisibility).map(color => ({
-      id: color,
-      name: getColorName(color),
-      color: color
-    }));
+    return Object.keys(colorsVisibility).map(color => {
+      // Si c'est un code hexadécimal, on récupère le nom français
+      // Si c'est déjà un nom, on le garde tel quel
+      const isHexColor = color.startsWith('#');
+      const displayName = isHexColor ? getColorNameFromHex(color) : color;
+      const hexColor = isHexColor ? color : getHexFromColorName(color);
+      
+      return {
+        id: color, // Garde l'ID original (hex ou nom selon ce qui est stocké)
+        name: displayName, // Nom à afficher
+        color: hexColor // Code hex pour l'affichage visuel
+      };
+    });
   }, [colorsVisibility]);
 
   // Fonctions pour basculer la visibilité
-  const toggleActorVisibilityHandler = (actorId) => {
+  const toggleActorVisibilityHandler = useCallback((actorId) => {
+    console.log('👁️ [TOGGLE ACTOR] ID:', actorId, 'Type:', typeof actorId);
     dispatch(toggleActorVisibility(actorId));
-  };
+  }, [dispatch]);
 
-  const toggleGroupVisibilityHandler = (groupId) => {
+  const toggleGroupVisibilityHandler = useCallback((groupId) => {
+
     dispatch(toggleGroupVisibility(groupId));
-  };
+  }, [dispatch]);
 
-  const toggleColorVisibilityHandler = (color) => {
+  const toggleColorVisibilityHandler = useCallback((color) => {
     dispatch(toggleColorVisibility(color));
-  };
+  }, [dispatch]);
 
-  // Fonction utilitaire pour obtenir un nom lisible à partir d'un code couleur
-  function getColorName(hexColor) {
-    // Map hex codes to translation keys
-    const colorKeys = {
-      '#FF0000': 'red',
-      '#00FF00': 'green',
-      '#0000FF': 'blue',
-      '#FFFF00': 'yellow',
-      '#FF00FF': 'magenta',
-      '#00FFFF': 'cyan',
-      '#FFA500': 'orange',
-      '#800080': 'purple',
-      '#008000': 'darkGreen',
-      '#800000': 'maroon',
-      '#000080': 'navy',
-      '#808080': 'gray',
-      '#C0C0C0': 'silver',
-      '#FFD700': 'gold'
-    };
-    
-    const key = colorKeys[hexColor?.toUpperCase()];
-    
-    // Try to get the translation, fallback to hex code
-    return key ? t(`colors.${key}`) : hexColor;
-  }
+
 
   return (
     <div className="views-panel">

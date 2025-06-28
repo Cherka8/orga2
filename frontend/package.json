@@ -21,6 +21,7 @@
     "@testing-library/user-event": "^14.5.2",
     "axios": "^1.9.0",
     "chart.js": "^4.4.8",
+    "classnames": "^2.5.1",
     "date-fns": "^4.1.0",
     "i18next": "^25.0.0",
     "i18next-browser-languagedetector": "^8.0.4",

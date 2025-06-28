@@ -13,12 +13,13 @@ export const fetchActors = createAsyncThunk(
   'actors/fetchActors',
   async (filters = {}, { rejectWithValue }) => {
     try {
-      console.log('Redux fetchActors called with filters:', filters);
+      console.log('🚀 [actorsSlice] fetchActors déclenché avec filters:', filters);
       const response = await actorService.getActors(filters);
-      console.log('Redux fetchActors response:', response);
+      console.log('📦 [actorsSlice] fetchActors response:', response);
+      console.log('📊 [actorsSlice] Nombre d\'acteurs reçus:', response?.data?.length || 0);
       return response; // { data: Actor[], total: number, page: number, limit: number }
     } catch (error) {
-      console.error('Redux fetchActors error:', error);
+      console.error('❌ [actorsSlice] fetchActors error:', error);
       const message = 
         (error.response && error.response.data && error.response.data.message) ||
         error.message ||
@@ -125,6 +126,7 @@ const actorsSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchActors.fulfilled, (state, action) => {
+        console.log('✅ [actorsSlice] fetchActors.fulfilled - payload:', action.payload);
         state.loading = false;
         state.byId = {};
         state.allIds = [];
@@ -144,6 +146,9 @@ const actorsSlice = createSlice({
           state.byId[actor.id] = actor;
           state.allIds.push(actor.id);
         });
+        
+        console.log('📊 [actorsSlice] Acteurs stockés dans state.byId:', Object.keys(state.byId));
+        console.log('📊 [actorsSlice] state.allIds:', state.allIds);
       })
       .addCase(fetchActors.rejected, (state, action) => {
         state.loading = false;

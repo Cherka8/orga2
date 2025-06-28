@@ -69,17 +69,12 @@ const viewsSlice = createSlice({
     updateAvailableActors(state, action) {
       const currentActors = action.payload.actors;
       
-      // Créer un nouvel objet pour les acteurs
-      const updatedActors = {};
-      
-      // Conserver uniquement les acteurs qui sont encore utilisés
+      // Ajoute les nouveaux acteurs sans supprimer les anciens
       currentActors.forEach(actorId => {
-        // Préserver l'état de visibilité si l'acteur existait déjà
-        updatedActors[actorId] = state.actors[actorId] !== undefined ? state.actors[actorId] : true;
+        if (state.actors[actorId] === undefined) {
+          state.actors[actorId] = true;
+        }
       });
-      
-      // Remplacer complètement l'objet des acteurs
-      state.actors = updatedActors;
     },
     
     /**
@@ -89,18 +84,13 @@ const viewsSlice = createSlice({
      */
     updateAvailableGroups(state, action) {
       const currentGroups = action.payload.groups;
-      
-      // Créer un nouvel objet pour les groupes
-      const updatedGroups = {};
-      
-      // Conserver uniquement les groupes qui sont encore utilisés
+
+      // Ajoute les nouveaux groupes sans supprimer les anciens
       currentGroups.forEach(groupId => {
-        // Préserver l'état de visibilité si le groupe existait déjà
-        updatedGroups[groupId] = state.groups[groupId] !== undefined ? state.groups[groupId] : true;
+        if (state.groups[groupId] === undefined) {
+          state.groups[groupId] = true;
+        }
       });
-      
-      // Remplacer complètement l'objet des groupes
-      state.groups = updatedGroups;
     },
     
     /**
@@ -131,7 +121,22 @@ const viewsSlice = createSlice({
      */
     toggleActorVisibility(state, action) {
       const actorId = action.payload;
-      state.actors[actorId] = !state.actors[actorId];
+      console.log('🔄 [REDUX] toggleActorVisibility - ID:', actorId, 'Type:', typeof actorId);
+      console.log('🔄 [REDUX] État actuel actors:', state.actors);
+  
+      if (state.actors[actorId] !== undefined) {
+        const oldValue = state.actors[actorId];
+        state.actors = {
+          ...state.actors,
+          [actorId]: !state.actors[actorId]
+        };
+        console.log('🔄 [REDUX] Toggle réussi:', actorId, oldValue, '->', !oldValue);
+      } else {
+        console.log('⚠️ [REDUX] Acteur non trouvé dans state.actors:', actorId);
+        console.log('⚠️ [REDUX] Clés disponibles:', Object.keys(state.actors));
+      }
+      
+      console.log('🔄 [REDUX] Nouvel état actors:', state.actors);
     },
     
     /**
@@ -141,7 +146,16 @@ const viewsSlice = createSlice({
      */
     toggleGroupVisibility(state, action) {
       const groupId = action.payload;
-      state.groups[groupId] = !state.groups[groupId];
+  
+      if (state.groups[groupId] !== undefined) {
+        state.groups = {
+          ...state.groups,
+          [groupId]: !state.groups[groupId]
+        };
+  
+      } else {
+    
+      }
     },
     
     /**
@@ -151,7 +165,16 @@ const viewsSlice = createSlice({
      */
     toggleColorVisibility(state, action) {
       const colorId = action.payload;
-      state.colors[colorId] = !state.colors[colorId];
+      console.log(`[viewsSlice] 👁️ Reducer toggleColorVisibility called with colorId: ${colorId} (type: ${typeof colorId})`);
+      if (state.colors[colorId] !== undefined) {
+        state.colors = {
+          ...state.colors,
+          [colorId]: !state.colors[colorId]
+        };
+        console.log(`[viewsSlice] 👁️ Color ${colorId} visibility set to: ${state.colors[colorId]}`);
+      } else {
+        console.warn(`[viewsSlice] ⚠️ Color with id ${colorId} not found in visibility state.`);
+      }
     },
     
     /**
@@ -191,13 +214,14 @@ const viewsSlice = createSlice({
      */
     activateFocus(state, action) {
       const { id, type } = action.payload;
-      
+      console.log(`[viewsSlice] 🎯 Activating focus for type: ${type}, id: ${id}. Current focus state:`, JSON.parse(JSON.stringify(state.focus)));
+
       // Si le focus est déjà actif sur cet élément, le désactiver
       if (state.focus.active && state.focus.targetId === id && state.focus.targetType === type) {
         viewsSlice.caseReducers.deactivateFocus(state, { type: 'views/deactivateFocus' });
         return;
       }
-      
+
       // Sauvegarder l'état actuel UNIQUEMENT si le focus n'était PAS déjà actif
       if (!state.focus.active) {
         state.focus.previousState = {
@@ -206,22 +230,22 @@ const viewsSlice = createSlice({
           colors: { ...state.colors }
         };
       }
-      
+
       // Activer le focus (ou mettre à jour la cible si déjà actif)
       state.focus.active = true;
       state.focus.targetId = id;
       state.focus.targetType = type;
-      
+
       // Masquer tous les éléments sauf celui qui est ciblé
       if (type === 'actor') {
         // Masquer tous les acteurs sauf celui ciblé
         Object.keys(state.actors).forEach(actorId => {
-          state.actors[actorId] = actorId === id;
+          state.actors[actorId] = actorId == id; // Utiliser == pour comparaison flexible (string vs number)
         });
       } else if (type === 'group') {
         // Masquer tous les groupes sauf celui ciblé
         Object.keys(state.groups).forEach(groupId => {
-          state.groups[groupId] = groupId === id;
+          state.groups[groupId] = groupId == id; // Utiliser == pour comparaison flexible (string vs number)
         });
       } else if (type === 'color') {
         // Masquer toutes les couleurs sauf celle ciblée
@@ -262,16 +286,26 @@ const viewsSlice = createSlice({
      * Also deactivates focus if the focused item is no longer in the visible set.
      */
     updateVisibleViewItems(state, action) {
-      const { actors = [], groups = [], colors = [] } = action.payload;
+      const { actors, groups, colors } = action.payload;
+
+      const actorIds = actors.map(actor => actor.id || actor);
+      const groupIds = groups.map(group => group.id || group);
+      const colorHexes = colors.map(color => color.hex || color);
 
       const newActorsVisibility = {};
-      actors.forEach(id => { newActorsVisibility[id] = true; });
+      actorIds.forEach(id => {
+        newActorsVisibility[id] = state.actors[id] !== undefined ? state.actors[id] : true;
+      });
 
       const newGroupsVisibility = {};
-      groups.forEach(id => { newGroupsVisibility[id] = true; });
+      groupIds.forEach(id => {
+        newGroupsVisibility[id] = state.groups[id] !== undefined ? state.groups[id] : true;
+      });
 
       const newColorsVisibility = {};
-      colors.forEach(color => { newColorsVisibility[color] = true; });
+      colorHexes.forEach(hex => {
+        newColorsVisibility[hex] = state.colors[hex] !== undefined ? state.colors[hex] : true;
+      });
 
       state.actors = newActorsVisibility;
       state.groups = newGroupsVisibility;
@@ -393,17 +427,17 @@ export const selectEventVisibility = createSelector(
     (_, event) => event
   ],
   (actorsVisibility, groupsVisibility, colorsVisibility, focus, event) => {
-    console.log(`=== Checking visibility for event: ${event.title} ===`);
+
     
     // Si le mode focus est actif, vérifier si l'événement correspond à l'élément ciblé
     if (focus.active) {
-      console.log('Focus is active:', focus);
+
       const { targetId, targetType } = focus;
       
       if (targetType === 'actor') {
         // Vérifier si l'acteur ciblé est présent dans l'événement
         const participants = event.extendedProps?.participants || [];
-        console.log('Event participants:', participants);
+
         
         const hasTargetActor = participants.some(p => 
           (p.type === 'human' || p.type === 'object') && p.id === targetId
@@ -413,7 +447,7 @@ export const selectEventVisibility = createSelector(
         const isPresentedByTarget = event.extendedProps?.presenterId === targetId;
         
         const isVisible = hasTargetActor || isPresentedByTarget;
-        console.log(`Actor focus check result: ${isVisible} (hasTargetActor: ${hasTargetActor}, isPresentedByTarget: ${isPresentedByTarget})`);
+
         return isVisible;
       }
       
