@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository, LessThan, MoreThan, DeepPartial } from 'typeorm';
 import { Event } from './entities/event.entity';
@@ -11,6 +11,8 @@ import { getColorNameFromHex, getHexFromColorName, isValidColor } from '../utils
 
 @Injectable()
 export class EventService {
+  private readonly logger = new Logger(EventService.name);
+
   constructor(
     @InjectRepository(Event)
     private readonly eventRepository: Repository<Event>,
@@ -95,9 +97,52 @@ export class EventService {
         presenterActor: true,
         participants: {
           actor: true,
+          group: true,
         },
       },
     });
+  }
+
+  async findAllForActor(actorId: number): Promise<Event[]> {
+    this.logger.log(`findAllForActor: Searching events for actorId: ${actorId}`);
+
+    const query = this.eventRepository.createQueryBuilder('event')
+      // Use LEFT JOINs because these relations can be null
+      .leftJoin('event.participants', 'participant')
+      .leftJoin('participant.group', 'group')
+      .leftJoin('group.members', 'member')
+      .leftJoin('event.presenterActor', 'presenterActor')
+      .leftJoin('event.locationActor', 'locationActor')
+      .where('participant.actorId = :actorId', { actorId })
+      .orWhere('member.actorId = :actorId', { actorId })
+      .orWhere('presenterActor.id = :actorId', { actorId })
+      .orWhere('locationActor.id = :actorId', { actorId })
+      .select('DISTINCT event.id', 'id');
+
+    const results = await query.getRawMany();
+    this.logger.log(`findAllForActor: Raw query found ${results.length} potential event IDs.`);
+
+    if (results.length === 0) {
+      return [];
+    }
+
+    const eventIds = results.map(r => r.id);
+    this.logger.log(`findAllForActor: Mapped to unique eventIds: [${eventIds.join(', ')}]`);
+
+    const events = await this.eventRepository.find({
+      where: { id: In(eventIds) },
+      relations: {
+        locationActor: true,
+        presenterActor: true,
+        participants: {
+          actor: true,
+          group: true,
+        },
+      },
+    });
+
+    this.logger.log(`findAllForActor: Returning ${events.length} full event objects.`);
+    return events;
   }
 
   async findOne(id: number, accountId: number): Promise<Event> {

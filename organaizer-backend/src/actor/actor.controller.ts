@@ -21,6 +21,7 @@ import { ActorService } from './actor.service';
 import { CreateActorDto } from './dto/create-actor.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { QueryHoursDto } from './dto/query-hours.dto';
 
 @ApiTags('actors')
 @ApiBearerAuth()
@@ -155,5 +156,9 @@ export class ActorController {
     return result;
   }
 
-  // We will add other endpoints here later.
+  @Post('hours/query')
+  @UseGuards(AuthGuard('jwt'))
+  async getActorHours(@Body() queryHoursDto: QueryHoursDto, @Request() req) {
+    return this.actorService.getActorHours(queryHoursDto, req.user.id);
+  }
 }

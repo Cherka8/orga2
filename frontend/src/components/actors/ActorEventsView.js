@@ -51,7 +51,8 @@ const ActorEventsView = () => {
   // Fonction pour vérifier si un acteur est membre d'un groupe
   const isActorInGroup = useCallback((actorId, groupId) => {
     const group = groupsById[groupId];
-    return group && group.members && group.members.includes(actorId);
+    // Les membres sont des objets, on doit donc vérifier la propriété actor_id
+    return group && group.members && group.members.some(member => member.actor_id === actorId);
   }, [groupsById]);
 
   useEffect(() => {
@@ -61,29 +62,14 @@ const ActorEventsView = () => {
     
     // Compter les événements directs et via groupes pour le débogage
     if (selectedActorId) {
+      // La logique de filtrage est maintenant alignée avec la structure de données aplatie.
       const directEvents = allEvents.filter(event => 
-        event.extendedProps?.participants?.some(
-          actorRef => actorRef.id === selectedActorId && actorRef.type === ACTOR_TYPES.HUMAN
-        )
+        event.participants?.some(p => p.actor?.id === selectedActorId && !p.group)
       );
       
-      const groupEvents = allEvents.filter(event => {
-        // Exclure les événements où l'acteur est déjà un participant direct
-        if (event.extendedProps?.participants?.some(
-          actorRef => actorRef.id === selectedActorId && actorRef.type === ACTOR_TYPES.HUMAN
-        )) {
-          return false;
-        }
-        
-        // Vérifier si l'acteur est membre d'un groupe participant
-        const groupParticipants = event.extendedProps?.participants?.filter(
-          p => p.type === ACTOR_TYPES.GROUP
-        ) || [];
-        
-        return groupParticipants.some(groupParticipant => 
-          isActorInGroup(selectedActorId, groupParticipant.id)
-        );
-      });
+      const groupEvents = allEvents.filter(event => 
+        event.participants?.some(p => p.group && isActorInGroup(selectedActorId, p.group.id))
+      );
       
       console.log('Direct Events Count:', directEvents.length);
       console.log('Group Events Count:', groupEvents.length);
@@ -95,23 +81,21 @@ const ActorEventsView = () => {
       return [];
     }
 
+    // Logique de filtrage unifiée et corrigée
     return allEvents.filter(event => {
-      // Cas 1: L'acteur est directement référencé dans les participants
-      const isDirectParticipant = event.extendedProps?.participants?.some(
-        actorRef => actorRef.id === selectedActorId && actorRef.type === ACTOR_TYPES.HUMAN
-      );
-      
-      if (isDirectParticipant) return true;
-      
-      // Cas 2: L'acteur est membre d'un groupe référencé dans les participants
-      const groupParticipants = event.extendedProps?.participants?.filter(
-        p => p.type === ACTOR_TYPES.GROUP
-      ) || [];
-      
-      // Vérifier chaque groupe participant
-      return groupParticipants.some(groupParticipant => 
-        isActorInGroup(selectedActorId, groupParticipant.id)
-      );
+      if (!event.participants) return false;
+
+      return event.participants.some(p => {
+        // L'acteur participe directement (et non via un groupe pour cette entrée)
+        if (p.actor?.id === selectedActorId && !p.group) {
+          return true;
+        }
+        // L'acteur participe via un groupe
+        if (p.group) {
+          return isActorInGroup(selectedActorId, p.group.id);
+        }
+        return false;
+      });
     });
   }, [allEvents, selectedActorId, isActorInGroup]);
 

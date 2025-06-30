@@ -1,8 +1,10 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository, Like, Between } from 'typeorm';
 import { Actor } from './entities/actor.entity';
+import { EventParticipant } from '../event-participant/entities/event-participant.entity';
 import { CreateActorDto } from './dto/create-actor.dto';
+import { QueryHoursDto } from './dto/query-hours.dto';
 import { Account } from '../auth/entities/account.entity';
 import { Express } from 'express';
 
@@ -11,6 +13,8 @@ export class ActorService {
   constructor(
     @InjectRepository(Actor)
     private readonly actorRepository: Repository<Actor>,
+    @InjectRepository(EventParticipant)
+    private readonly eventParticipantRepository: Repository<EventParticipant>,
   ) {}
 
   async create(createActorDto: CreateActorDto, userId: number): Promise<Actor> {
@@ -60,6 +64,19 @@ export class ActorService {
     
     console.log('Updated actor result:', updatedActor);
     return updatedActor;
+  }
+
+  async findOne(id: number, userId: number): Promise<Actor> {
+    const actor = await this.actorRepository.findOne({
+      where: { id, account: { id: userId } },
+      relations: ['account'],
+    });
+
+    if (!actor) {
+      throw new NotFoundException(`Actor with ID ${id} not found or access denied.`);
+    }
+
+    return actor;
   }
 
   async findAll(userId: number, filters: any): Promise<{ data: Actor[], total: number, page: number, limit: number }> {
@@ -140,5 +157,63 @@ export class ActorService {
     };
   }
 
-  // We will add other methods here later.
+  async getActorHours(queryHoursDto: QueryHoursDto, userId: number) {
+    const { startDate, endDate, actorIds } = queryHoursDto;
+
+    const participants = await this.eventParticipantRepository.find({
+      relations: {
+        event: true,
+        actor: true,
+        group: {
+          members: {
+            actor: true,
+          },
+        },
+      },
+      where: {
+        event: {
+          account: { id: userId },
+          startTime: Between(new Date(startDate), new Date(endDate)),
+        },
+      },
+    });
+
+    const actorHours = new Map<number, number>();
+
+    for (const participant of participants) {
+      if (!participant.event) continue;
+
+      const duration = new Date(participant.event.endTime).getTime() - new Date(participant.event.startTime).getTime();
+      if (duration < 0) continue;
+
+      // Direct actor participation
+      if (participant.actor && participant.actor.id) {
+        const currentHours = actorHours.get(participant.actor.id) || 0;
+        actorHours.set(participant.actor.id, currentHours + duration);
+      }
+
+      // Group participation
+      if (participant.group && participant.group.members) {
+        for (const member of participant.group.members) {
+          if (member.actor && member.actor.id) {
+            const currentHours = actorHours.get(member.actor.id) || 0;
+            actorHours.set(member.actor.id, currentHours + duration);
+          }
+        }
+      }
+    }
+
+    let results = Array.from(actorHours.entries()).map(([id, ms]) => ({
+      actorId: id,
+      totalMilliseconds: ms,
+    }));
+
+    // Optional filtering if specific actorIds are requested
+    if (actorIds && actorIds.length > 0) {
+      const actorIdSet = new Set(actorIds);
+      results = results.filter(r => actorIdSet.has(r.actorId));
+    }
+
+    return results;
+  }
 }

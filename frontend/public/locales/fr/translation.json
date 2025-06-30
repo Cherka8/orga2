@@ -86,7 +86,8 @@
     "colorsSectionTitle": "Couleurs",
     "fallbackActorName": "Acteur",
     "fallbackGroupName": "Groupe",
-    "searchActorPlaceholder": "Rechercher des acteurs..."
+    "searchActorPlaceholder": "Rechercher des acteurs...",
+    "loading": "Chargement..."
   },
   "viewsSection": {
     "noItemsAvailable": "Aucun élément disponible"

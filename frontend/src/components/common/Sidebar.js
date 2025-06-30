@@ -9,7 +9,7 @@ import BusinessHoursSelector from './BusinessHoursSelector';
 import ViewsPanel from '../views/ViewsPanel';
 import '../../styles/views-panel.css';
 
-const Sidebar = ({ width, setWidth, isOpen, setIsOpen }) => {
+const Sidebar = ({ width, setWidth, isOpen, setIsOpen, isLoading }) => {
   // État pour gérer l'ouverture/fermeture des menus déroulants
   const [viewsOpen, setViewsOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
@@ -314,7 +314,7 @@ const Sidebar = ({ width, setWidth, isOpen, setIsOpen }) => {
                 opacity: viewsOpen ? 1 : 0
               }}
             >
-              <ViewsPanel /> { /* ViewsPanel rendu ici */ }
+              <ViewsPanel isLoading={isLoading} /> { /* ViewsPanel rendu ici */ }
             </div>
           </li>
           <li>

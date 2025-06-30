@@ -24,20 +24,14 @@ export const fetchEvents = createAsyncThunk(
         // Convertir le nom de couleur en code hex pour l'affichage
         const displayColor = event.eventColor ? getHexFromColorName(event.eventColor) : '#3788d8';
         
+        // On retourne un objet plat. FullCalendar placera automatiquement
+        // les propriétés non standard (comme 'participants') dans 'extendedProps'.
         return {
           ...event,
           start: event.startTime,
           end: event.endTime,
           backgroundColor: displayColor,
           borderColor: displayColor,
-          eventColor: event.eventColor, // Garder le nom de couleur pour le filtrage
-          extendedProps: {
-            ...event.extendedProps,
-            participants: event.participants || [],
-            presenterId: event.presenterId,
-            // Conserver toutes les autres propriétés étendues
-            ...event
-          }
         };
       });
     } catch (error) {
@@ -76,13 +70,6 @@ export const fetchEventById = createAsyncThunk(
         end: event.endTime,
         backgroundColor: displayColor,
         borderColor: displayColor,
-        eventColor: event.eventColor, // Garder le nom de couleur pour le filtrage
-        extendedProps: {
-          ...event.extendedProps,
-          participants: event.participants || [],
-          presenterId: event.presenterId,
-          ...event
-        }
       };
     } catch (error) {
       return rejectWithValue(error.message);
@@ -231,8 +218,9 @@ export const selectVisibleEvents = createSelector(
     }
 
     return events.filter(event => {
-      const participants = event.extendedProps?.participants || [];
-      const presenterId = event.extendedProps?.presenterId;
+      // On accède directement aux propriétés de l'événement, car la structure a été aplatie.
+      const participants = event.participants || [];
+      const presenterId = event.presenterId;
 
       const involvedActorIds = new Set();
       if (presenterId) {

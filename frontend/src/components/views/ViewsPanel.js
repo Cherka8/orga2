@@ -21,7 +21,7 @@ import { getColorName, getColorNameFromHex, getHexFromColorName } from '../../ut
  * Composant principal du panneau Views
  * Affiche les trois sections (Acteurs, Groupes, Couleurs) et gère le mode focus
  */
-const ViewsPanel = () => {
+const ViewsPanel = ({ isLoading }) => {
 
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -199,6 +199,16 @@ const ViewsPanel = () => {
   }, [dispatch]);
 
 
+
+    if (isLoading) {
+    return (
+      <div className="views-panel-loading">
+        {/* Vous pouvez utiliser un composant Spinner ici si vous en avez un */}
+        <div className="spinner"></div> 
+        <p>{t('viewsPanel.loading', 'Chargement des données...')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="views-panel">

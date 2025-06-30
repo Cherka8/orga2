@@ -6,7 +6,7 @@ import {
   selectAllFilters, 
   updateVisibleViewItems
 } from './redux/slices/viewsSlice';
-import { setEvents as setEventsInStore, createEvent, fetchEvents, selectVisibleEvents, selectEvents } from './redux/slices/eventsSlice';
+import { setEvents as setEventsInStore, createEvent, fetchEvents, updateEvent, selectVisibleEvents, selectEvents } from './redux/slices/eventsSlice';
 import { selectAllActors, fetchActors } from './redux/slices/actorsSlice';
 import { selectAllGroups, fetchGroups } from './redux/slices/groupsSlice';
 import { useTranslation } from 'react-i18next'; // Import useTranslation
@@ -44,6 +44,7 @@ const ProfilePage = lazy(() => import('./components/profile/ProfilePage'));
 const EmailVerificationPage = lazy(() => import('./components/auth/EmailVerificationPage'));
 const ForgotPasswordPage = lazy(() => import('./components/auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./components/auth/ResetPasswordPage'));
+const SharedCalendarPage = lazy(() => import('./pages/SharedCalendarPage')); // <-- Ajout de la nouvelle page
 const AuthInitializer = lazy(() => import('./components/auth/AuthInitializer'));
 
 function AppContent() {
@@ -52,7 +53,7 @@ function AppContent() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
 
   useEffect(() => {
-    const publicPages = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
+    const publicPages = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/shared-calendar'];
     const isPublicPage = publicPages.some(page => location.pathname.startsWith(page));
 
     if (!isAuthenticated && !isPublicPage) {
@@ -61,13 +62,14 @@ function AppContent() {
     }
   }, [isAuthenticated, location.pathname, navigate]);
   // Déterminer si nous sommes sur une page d'authentification ou de profil
-    const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/email-verification'].some(path => location.pathname.startsWith(path));
+    const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/email-verification', '/shared-calendar'].some(path => location.pathname.startsWith(path));
   const isProfilePage = location.pathname === '/profile';
   const { i18n } = useTranslation(); // Get i18n instance
   const [currentView, setCurrentView] = useState('timeGridWeek');
   const calendarRef = useRef(null);
   const dispatch = useDispatch();
-    const eventsFromStore = useSelector(selectEvents);
+  const eventsFromStore = useSelector(selectEvents);
+  const [dataLoading, setDataLoading] = useState(true); // État pour le chargement initial des données
   
   // Get groups data from Redux (déclaré avant filteredEvents)
   const groupsById = useSelector(selectGroupsByIdMap);
@@ -384,62 +386,22 @@ function AppContent() {
     setIsDetailsPopoverOpen(true);
   };
 
-  const handleEventChange = (arg) => {
-    // Ignore changes related to the temporary event used for preview
-    if (arg.event.id === tempEventId || (arg.event.extendedProps && arg.event.extendedProps.isTemporary)) {
-      // console.log("Ignoring change for temporary event:", arg.event.id);
-      return;
-    }
-
-    console.log("Event changed:", arg.event.toPlainObject());
-    
-    // Mettre à jour l'état local des événements
-    dispatch(setEventsInStore(eventsFromStore.map(event => {
-      if (event.id === arg.event.id) {
-        return {
-          ...arg.event.toPlainObject(),
-          start: new Date(arg.event.start),
-          end: arg.event.end ? new Date(arg.event.end) : null
-        };
-      }
-      return event;
-    })));
-  };
-
   const handleEventDrop = (arg) => {
-    // Cette fonction est appelée lorsqu'un événement est déplacé
-    console.log("Event dropped:", arg.event.toPlainObject());
-    
-    // Vérifier si l'événement déplacé est un événement temporaire
-    if (arg.event.extendedProps && arg.event.extendedProps.isTemporary) {
-      // Si c'est un événement temporaire, mettre à jour l'état local du tempEvent
-      setTempEvent({
-        ...tempEvent,
-        start: new Date(arg.event.start),
-        end: arg.event.end ? new Date(arg.event.end) : null
-      });
-    } else {
-      // Sinon, mettre à jour l'état local des événements
-      handleEventChange(arg);
-    }
+    const { event } = arg;
+    const eventData = {
+      start: event.startStr,
+      end: event.endStr,
+    };
+    dispatch(updateEvent({ id: event.id, eventData }));
   };
 
   const handleEventResize = (arg) => {
-    // Cette fonction est appelée lorsqu'un événement est redimensionné
-    console.log("Event resized:", arg.event.toPlainObject());
-    
-    // Vérifier si l'événement redimensionné est un événement temporaire
-    if (arg.event.extendedProps && arg.event.extendedProps.isTemporary) {
-      // Si c'est un événement temporaire, mettre à jour l'état local du tempEvent
-      setTempEvent({
-        ...tempEvent,
-        start: new Date(arg.event.start),
-        end: arg.event.end ? new Date(arg.event.end) : null
-      });
-    } else {
-      // Sinon, mettre à jour l'état local des événements
-      handleEventChange(arg);
-    }
+    const { event } = arg;
+    const eventData = {
+      start: event.startStr,
+      end: event.endStr,
+    };
+    dispatch(updateEvent({ id: event.id, eventData }));
   };
 
   const handlePrev = () => {
@@ -522,12 +484,23 @@ function AppContent() {
   };
 
   useEffect(() => {
-    // console.log('🚀 [App.js] useEffect de chargement initial déclenché');
-    dispatch(fetchEvents());
-    dispatch(fetchActors({}));
-    dispatch(fetchGroups());
-    // console.log('📦 [App.js] Dispatches de chargement des données envoyés');
-  }, [dispatch]);
+    const fetchData = async () => {
+      setDataLoading(true);
+      // We fetch all core data needed for the authenticated app experience
+      await Promise.all([
+        dispatch(fetchActors()),
+        dispatch(fetchGroups()),
+        dispatch(fetchEvents()) 
+      ]);
+      setDataLoading(false);
+    };
+
+    // Only fetch data if the user is authenticated.
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [dispatch, isAuthenticated]);
+
 
   // Synchronisation des acteurs et groupes vers le slice 'views'
   const allActors = useSelector(selectAllActors);
@@ -1198,6 +1171,7 @@ function AppContent() {
             setWidth={setSidebarWidth} 
             isOpen={sidebarOpen} 
             setIsOpen={setSidebarOpen} 
+            isLoading={dataLoading}
           />
         )}
         <div style={{ 
@@ -1280,7 +1254,6 @@ function AppContent() {
                         events={filteredEvents}
                         dateClick={handleDateClick}
                         eventClick={handleEventClick}
-                        eventChange={handleEventChange}
                         eventDrop={handleEventDrop}
                         eventResize={handleEventResize}
                         selectable={false}
@@ -1335,6 +1308,11 @@ function AppContent() {
               <Route path="/actors/*" element={
                 <Suspense fallback={<div>Loading...</div>}>
                   <ActorsPage />
+                </Suspense>
+              } />
+              <Route path="/shared-calendar" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <SharedCalendarPage />
                 </Suspense>
               } />
               <Route path="*" element={<Navigate to="/" replace />} />

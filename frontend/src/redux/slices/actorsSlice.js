@@ -62,6 +62,24 @@ export const updateActor = createAsyncThunk(
   }
 );
 
+export const fetchActorHours = createAsyncThunk(
+  'actors/fetchActorHours',
+  async (filters, { rejectWithValue }) => {
+    try {
+      const response = await actorService.getActorHours(filters);
+      // La réponse du backend (une fois implémentée) sera un tableau d'objets
+      // ex: [{ actorId: 1, totalMilliseconds: 7200000 }]
+      return response.data; 
+    } catch (error) {
+      const message = 
+        (error.response && error.response.data && error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return rejectWithValue(message);
+    }
+  }
+);
+
 export const deleteActor = createAsyncThunk(
   'actors/deleteActor',
   async (actorId, { rejectWithValue }) => {
@@ -96,7 +114,10 @@ const initialState = {
   filter: {
     type: null,
     search: ''
-  }
+  },
+  hoursById: {},
+  hoursLoading: false,
+  hoursError: null
 };
 
 // Création du slice
@@ -200,6 +221,27 @@ const actorsSlice = createSlice({
       .addCase(deleteActor.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      // Reducers for fetchActorHours
+      .addCase(fetchActorHours.pending, (state) => {
+        state.hoursLoading = true;
+        state.hoursError = null;
+      })
+      .addCase(fetchActorHours.fulfilled, (state, action) => {
+        state.hoursLoading = false;
+        const newHoursById = {};
+        // La réponse est un tableau : [{ actorId, totalMilliseconds }]
+        // On la transforme en objet pour un accès facile
+        if (Array.isArray(action.payload)) {
+            action.payload.forEach(item => {
+                newHoursById[item.actorId] = item.totalMilliseconds;
+            });
+        }
+        state.hoursById = newHoursById;
+      })
+      .addCase(fetchActorHours.rejected, (state, action) => {
+        state.hoursLoading = false;
+        state.hoursError = action.payload;
       });
   }
 });

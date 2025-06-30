@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { useSelector } from 'react-redux';
-import { selectVisibleEvents } from '../../redux/slices/eventsSlice';
-import { selectActorsByIdMap } from '../../redux/slices/actorsSlice'; 
-import { selectGroupsByIdMap } from '../../redux/slices/groupsSlice'; 
+import React, { useMemo, useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { 
+  selectActorsByIdMap, 
+  fetchActorHours 
+} from '../../redux/slices/actorsSlice';
 import { 
   getHumanActors, 
-  calculateActorHours, 
   formatDuration 
 } from '../../utils/timeUtils';
 import ActorTimeList from '../time/ActorTimeList';
@@ -17,18 +17,25 @@ import { useTranslation } from 'react-i18next';
 import { fr, enUS } from 'date-fns/locale';
 
 const TimeView = () => {
-  const { t, i18n } = useTranslation(); // Hook de traduction
-    const events = useSelector(selectVisibleEvents);
+  const { t, i18n } = useTranslation();
+  const dispatch = useDispatch();
+
   const actorsById = useSelector(selectActorsByIdMap);
-  const groupsById = useSelector(selectGroupsByIdMap);
+  const { hoursById, hoursLoading, hoursError } = useSelector(state => state.actors);
 
   // État pour les IDs des acteurs sélectionnés pour le graphique
   const [selectedActorIdsForChart, setSelectedActorIdsForChart] = useState([]);
   // État pour le terme de recherche
   const [searchTerm, setSearchTerm] = useState('');
   // États pour les dates de début et de fin
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  const [startDate, setStartDate] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  });
 
   // Déterminer la locale pour date-fns basé sur la langue i18n
   const datePickerLocale = i18n.language === 'fr' ? fr : enUS;
@@ -40,21 +47,32 @@ const TimeView = () => {
 
   const humanActors = useMemo(() => getHumanActors(actorsState), [actorsState]);
 
+  // Effect to fetch actor hours when date range changes
+  useEffect(() => {
+    if (startDate && endDate) {
+      // Ensure end date is not before start date
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      dispatch(fetchActorHours({ 
+        startDate: startDate.toISOString(), 
+        endDate: endOfDay.toISOString() 
+      }));
+    }
+  }, [startDate, endDate, dispatch]);
+
   const actorsWithHours = useMemo(() => {
-    if (!humanActors || !events || !groupsById) return [];
+    if (!humanActors) return [];
 
     return humanActors.map(actor => {
-      if (!actor || !actor.id) return null; 
-      
-      // Passer startDate et endDate à calculateActorHours
-      const totalMs = calculateActorHours(actor.id, events, groupsById, startDate, endDate);
+      const totalMs = hoursById[actor.id] || 0;
       return {
         ...actor,
         totalHours: totalMs,
         totalHoursFormatted: formatDuration(totalMs)
       };
-    }).filter(actor => actor !== null); 
-  }, [humanActors, events, groupsById, startDate, endDate]); // Ajouter startDate et endDate aux dépendances
+    });
+  }, [humanActors, hoursById]);
 
   // Filtrer les acteurs basés sur le terme de recherche
   const filteredActorsWithHours = useMemo(() => {
@@ -164,7 +182,15 @@ const TimeView = () => {
               
               {/* Zone du graphique avec animation de transition - Optimisée pour tablette */}
               <div className="flex-grow flex items-center justify-center transition-all duration-300 ease-in-out overflow-hidden" style={{ minHeight: '350px' }}>
-                {selectedActorsForChart.length > 0 ? (
+                {hoursLoading ? (
+                  <div className="text-center p-6">
+                    <p className="text-gray-500">{t('timeView.loadingHours')}</p>
+                  </div>
+                ) : hoursError ? (
+                  <div className="text-center p-6 text-red-500">
+                    <p>{t('timeView.errorHours')}: {hoursError}</p>
+                  </div>
+                ) : selectedActorsForChart.length > 0 ? (
                   <div className="w-full h-full" style={{ minHeight: '350px', touchAction: 'pan-y' }}>
                     <ActorHoursChart actorsData={selectedActorsForChart} />
                   </div>

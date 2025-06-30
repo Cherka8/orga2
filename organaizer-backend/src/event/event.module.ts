@@ -15,6 +15,7 @@ import { Group } from '../group/entities/group.entity';
   ],
   controllers: [EventController],
   providers: [EventService],
+  exports: [EventService], // <-- Ajout de cette ligne
 })
 export class EventModule {}
 

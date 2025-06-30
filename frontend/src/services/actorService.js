@@ -142,11 +142,17 @@ const deleteActor = async (actorId) => {
   }
 };
 
+const getActorHours = (filters) => {
+  console.log('Fetching actor hours with filters:', filters);
+  return apiClient.post('/actors/hours/query', filters);
+};
+
 const actorService = {
   createActor,
   updateActor,
   getActors,
   deleteActor,
+  getActorHours,
 };
 
 export default actorService;

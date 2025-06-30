@@ -37,7 +37,7 @@ const ActorEventList = ({ events = [] }) => {
       {sortedEvents.map((event, index) => {
         const startDate = parseISO(event.start);
         const endDate = parseISO(event.end);
-        const locationActor = event.extendedProps?.location;
+        const locationActor = event.locationActor;
         
         const eventColor = event.backgroundColor 
           ? `border-l-4 border-[${event.backgroundColor}] bg-gradient-to-r from-[${event.backgroundColor}]/10 to-[${event.backgroundColor}]/5`
@@ -69,13 +69,13 @@ const ActorEventList = ({ events = [] }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                   </svg>
-                  <span>{locationActor.name || t('actorEventList.unspecifiedLocation')}</span>
+                  <span>{locationActor.locationName || t('actorEventList.unspecifiedLocation')}</span>
                 </div>
               )}
               
-              {event.extendedProps?.description && (
+              {event.description && (
                 <div className="mt-2 text-sm text-gray-600 bg-white bg-opacity-50 p-2 rounded">
-                  {event.extendedProps.description}
+                  {event.description}
                 </div>
               )}
             </div>

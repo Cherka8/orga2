@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { selectAllActors, ACTOR_TYPES } from '../../redux/slices/actorsSlice';
+import { shareCalendarWithActor } from '../../services/calendarSharingService';
 
 const ShareView = () => {
   const { t } = useTranslation();
@@ -56,104 +57,105 @@ const ShareView = () => {
     }
   };
 
-  // Simuler l'envoi du calendrier à un acteur spécifique
-  const handleShareWithActor = (actorId) => {
+  // Partager le calendrier avec un acteur spécifique via l'API
+  const handleShareWithActor = async (actorId) => {
     setIsLoading(true);
-    
-    // Trouver l'acteur
+    setNotification({ type: '', message: '' }); // Reset notification
+
     const actor = humanActors.find(a => a.id === actorId);
-    
-    // Vérifier si l'acteur a un email
-    if (!actor.email) {
-      setNotification({
-        type: 'error',
-        message: t('shareView.errorNoEmail', { name: `${actor.firstName} ${actor.lastName}` })
-      });
-      setIsLoading(false);
-      return;
-    }
-    
-    // Simuler un appel API (front-end uniquement)
-    setTimeout(() => {
+
+    try {
+      const response = await shareCalendarWithActor(actorId);
       setNotification({
         type: 'success',
-        message: t('shareView.successSingle', { name: `${actor.firstName} ${actor.lastName}` })
+        message: response.message || t('shareView.successSingle', { name: `${actor.firstName} ${actor.lastName}` })
       });
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || t('shareView.errorGeneric');
+      setNotification({
+        type: 'error',
+        message: errorMessage
+      });
+    } finally {
       setIsLoading(false);
-      
       // Effacer la notification après 3 secondes
       setTimeout(() => {
         setNotification({ type: '', message: '' });
       }, 3000);
-    }, 1000);
+    }
   };
 
   // Simuler l'envoi du calendrier à tous les acteurs sélectionnés
   const handleShareWithSelected = () => {
     if (selectedActors.length === 0) {
-      setNotification({
-        type: 'error',
-        message: t('shareView.errorNoSelection')
-      });
+      setNotification({ type: 'error', message: t('shareView.errorNoSelection') });
       return;
     }
 
     setIsLoading(true);
-    
-    // Vérifier si tous les acteurs sélectionnés ont un email
-    const noEmailActors = selectedActors
-      .map(id => humanActors.find(a => a.id === id))
-      .filter(actor => !actor.email);
-    
-    if (noEmailActors.length > 0) {
-      // Stocker les acteurs sans email pour une utilisation ultérieure
-      setActorsWithoutEmail(noEmailActors);
-      
-      // Limiter le nombre d'acteurs affichés dans le message d'erreur
-      let names;
-      if (noEmailActors.length <= 3) {
-        names = noEmailActors.map(a => `${a.firstName} ${a.lastName}`).join(', ');
-      } else {
-        const firstThree = noEmailActors.slice(0, 3).map(a => `${a.firstName} ${a.lastName}`).join(', ');
-        names = t('shareView.andOthers', { names: firstThree, count: noEmailActors.length - 3 });
-      }
-      
+    setNotification({ type: '', message: '' }); // Reset notification
+    setActorsWithoutEmail([]); // Reset warning state
+
+    const allSelectedFullActors = selectedActors.map(id => humanActors.find(a => a.id === id)).filter(Boolean);
+
+    const actorsWithEmail = allSelectedFullActors.filter(actor => actor.email);
+    const actorsWithoutEmail = allSelectedFullActors.filter(actor => !actor.email);
+
+    if (actorsWithoutEmail.length > 0) {
+      // Set a warning about actors without an email, but don't stop the process.
+      setActorsWithoutEmail(actorsWithoutEmail);
+      const names = actorsWithoutEmail.map(a => `${a.firstName} ${a.lastName}`).join(', ');
       setNotification({
         type: 'warning',
-        message: t('shareView.errorMultipleNoEmail', { names, count: noEmailActors.length }),
-        showSendAnyway: true
+        message: t('shareView.warningSomeNoEmail', { count: actorsWithoutEmail.length, names })
       });
-      setIsLoading(false);
-      return;
     }
-    
-    // Envoyer à tous les acteurs sélectionnés qui ont un email
-    sendToActorsWithEmail(selectedActors);
-  };
-  
-  // Fonction pour envoyer aux acteurs qui ont un email
-  const sendToActorsWithEmail = (actorIds) => {
-    setIsLoading(true);
-    
-    // Filtrer les acteurs qui ont un email
-    const actorsWithEmail = actorIds
-      .map(id => humanActors.find(a => a.id === id))
-      .filter(actor => actor.email);
-    
-    // Simuler un appel API (front-end uniquement)
-    setTimeout(() => {
-      setNotification({
-        type: 'success',
-        message: t('shareView.successMultiple', { count: actorsWithEmail.length })
-      });
+
+    if (actorsWithEmail.length > 0) {
+      // Proceed to send emails to the actors who have an address.
+      sendToActorsWithEmail(actorsWithEmail.map(a => a.id));
+    } else {
+      // If no selected actors had an email, stop the loading indicator.
       setIsLoading(false);
+    }
+  };
+
+  // Fonction pour envoyer aux acteurs qui ont un email
+  const sendToActorsWithEmail = async (actorIds) => {
+    // isLoading is already set to true by the calling function.
+
+    const results = await Promise.allSettled(
+      actorIds.map(id => shareCalendarWithActor(id))
+    );
+
+    const successCount = results.filter(r => r.status === 'fulfilled').length;
+    const errorCount = results.filter(r => r.status === 'rejected').length;
+
+    let finalMessage = '';
+    // The notification for actors without email might already be set. We will append to it.
+    let currentMessage = notification.message;
+
+    if (successCount > 0) {
+      finalMessage += t('shareView.successMultiple', { count: successCount });
+    }
+
+    if (errorCount > 0) {
+      finalMessage += ` ${t('shareView.errorMultiple', { count: errorCount })}`;
+    }
+
+    setNotification({
+      type: errorCount > 0 ? 'warning' : 'success',
+      message: [currentMessage, finalMessage.trim()].filter(Boolean).join(' | ')
+    });
+
+    setIsLoading(false);
+    setSelectedActors([]); // Deselect actors after the operation
+
+    // Clear notification after a longer period to allow reading the summary
+    setTimeout(() => {
+      setNotification({ type: '', message: '' });
       setActorsWithoutEmail([]);
-      
-      // Effacer la notification après 3 secondes
-      setTimeout(() => {
-        setNotification({ type: '', message: '' });
-      }, 3000);
-    }, 1500);
+    }, 7000);
   };
 
   return (
