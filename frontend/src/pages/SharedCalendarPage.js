@@ -1,19 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+import moment from 'moment';
+import 'moment/locale/fr';
 import { getSharedCalendar } from '../services/calendarSharingService';
 import '../styles/calendar-modern.css'; // Re-use existing calendar styles
 import { useTranslation } from 'react-i18next';
-import frLocale from '@fullcalendar/core/locales/fr';
-import enLocale from '@fullcalendar/core/locales/en-gb';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const SharedCalendarPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [view, setView] = useState('month');
+  const [date, setDate] = useState(new Date());
   const location = useLocation();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
+  
+  // Configure le localisateur moment en fonction de la langue
+  moment.locale(i18n.language.startsWith('fr') ? 'fr' : 'en');
+  const localizer = momentLocalizer(moment);
 
   useEffect(() => {
     const token = new URLSearchParams(location.search).get('token');
@@ -31,18 +38,23 @@ const SharedCalendarPage = () => {
         console.log('SharedCalendarPage: Received data from API:', result);
 
         if (result && result.events) {
-          const formattedEvents = result.events.map(event => ({
-            title: event.title,
-            start: event.startTime, // Map startTime to start
-            end: event.endTime,     // Map endTime to end
-            allDay: event.isAllDay,
-            extendedProps: {
-              description: event.description,
-              color: event.eventColor,
-            },
-          }));
-          console.log('SharedCalendarPage: Formatted events for FullCalendar:', formattedEvents);
-          setData({ ...result, events: formattedEvents });
+          const formattedEvents = result.events.map(event => {
+            // Ensure dates are properly parsed as Date objects
+            const startDate = new Date(event.startTime);
+            const endDate = event.endTime ? new Date(event.endTime) : null;
+            
+            return {
+              title: event.title,
+              start: startDate,
+              end: endDate || new Date(startDate.getTime() + 60 * 60 * 1000), // Default to 1 hour if no end time
+              allDay: event.isAllDay,
+              resource: event.description,
+              color: event.eventColor || '#3788d8'
+            };
+          });
+          console.log('SharedCalendarPage: Formatted events for React Big Calendar:', formattedEvents);
+          setData(result);
+          setEvents(formattedEvents);
         } else {
           setData(result);
         }
@@ -76,24 +88,49 @@ const SharedCalendarPage = () => {
         Calendrier de {data.actor.firstName} {data.actor.lastName}
       </h1>
       <div className="calendar-container" style={{ height: '80vh' }}>
-        <FullCalendar
-          plugins={[dayGridPlugin]}
-          initialView="dayGridMonth"
-          events={data.events || []} // Ensure events is an array
-          locale={i18n.language.startsWith('fr') ? frLocale : enLocale}
-          headerToolbar={{
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,dayGridWeek'
+        <Calendar
+          localizer={localizer}
+          events={events}
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: '100%' }}
+          views={['month', 'week', 'day']}
+          view={view}
+          date={date}
+          onView={setView}
+          onNavigate={setDate}
+          messages={{
+            today: i18n.language.startsWith('fr') ? 'Aujourd\'hui' : 'Today',
+            previous: i18n.language.startsWith('fr') ? 'Précédent' : 'Back',
+            next: i18n.language.startsWith('fr') ? 'Suivant' : 'Next',
+            month: i18n.language.startsWith('fr') ? 'Mois' : 'Month',
+            week: i18n.language.startsWith('fr') ? 'Semaine' : 'Week',
+            day: i18n.language.startsWith('fr') ? 'Jour' : 'Day',
+            agenda: i18n.language.startsWith('fr') ? 'Agenda' : 'Agenda',
+            date: i18n.language.startsWith('fr') ? 'Date' : 'Date',
+            time: i18n.language.startsWith('fr') ? 'Heure' : 'Time',
+            event: i18n.language.startsWith('fr') ? 'Événement' : 'Event',
+            allDay: i18n.language.startsWith('fr') ? 'Toute la journée' : 'All Day'
           }}
-          editable={false}
-          selectable={false}
-          droppable={false}
-          eventClick={(info) => {
-            // Prevent default browser action
-            info.jsEvent.preventDefault();
-            // Optionally, you could show event details in a simple alert or modal
-            alert(`Événement: ${info.event.title}\nDébut: ${info.event.start.toLocaleString()}\nFin: ${info.event.end ? info.event.end.toLocaleString() : 'N/A'}`);
+          formats={{
+            timeGutterFormat: (date, culture, localizer) =>
+              localizer.format(date, 'HH:mm', culture),
+            eventTimeRangeFormat: ({ start, end }, culture, localizer) =>
+              `${localizer.format(start, 'HH:mm', culture)} - ${localizer.format(end, 'HH:mm', culture)}`
+          }}
+          eventPropGetter={(event) => ({
+            style: {
+              backgroundColor: event.color,
+              borderColor: event.color,
+              color: '#ffffff',
+              fontSize: '0.9em',
+              padding: '2px 5px',
+              borderRadius: '3px',
+              height: 'auto'
+            }
+          })}
+          onSelectEvent={(event) => {
+            alert(`Événement: ${event.title}\nDébut: ${event.start.toLocaleString()}\nFin: ${event.end.toLocaleString()}${event.resource ? '\nDescription: ' + event.resource : ''}`);
           }}
         />
       </div>

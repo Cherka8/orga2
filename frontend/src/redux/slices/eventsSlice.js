@@ -18,6 +18,14 @@ export const fetchEvents = createAsyncThunk(
     try {
       // On passe l'objet dateRange à la fonction du service.
       const events = await eventService.getEvents(dateRange);
+      
+      // DEBUG: Log pour voir la structure des événements de l'API
+      console.log('🔍 [API] Événements bruts de l\'API:', events);
+      if (events.length > 0) {
+        console.log('🔍 [API] Premier événement détaillé:', events[0]);
+        console.log('🔍 [API] Participants du premier événement:', events[0].participants);
+      }
+      
       // Le backend retourne startTime et endTime. On les mappe vers start et end.
       // On garde les dates comme des strings ISO pour la sérialisation.
       return events.map(event => {

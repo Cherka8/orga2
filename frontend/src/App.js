@@ -6,7 +6,7 @@ import {
   selectAllFilters, 
   updateVisibleViewItems
 } from './redux/slices/viewsSlice';
-import { setEvents as setEventsInStore, createEvent, fetchEvents, updateEvent, selectVisibleEvents, selectEvents } from './redux/slices/eventsSlice';
+import { setEvents as setEventsInStore, createEvent, fetchEvents, updateEvent, selectVisibleEvents, selectEvents, selectEventsStatus } from './redux/slices/eventsSlice';
 import { selectAllActors, fetchActors } from './redux/slices/actorsSlice';
 import { selectAllGroups, fetchGroups } from './redux/slices/groupsSlice';
 import { useTranslation } from 'react-i18next'; // Import useTranslation
@@ -105,8 +105,9 @@ function AppContent() {
     }
     
     const filtered = eventsFromStore.filter(event => {
-      const participants = event.extendedProps?.participants || [];
-      const presenterId = event.extendedProps?.presenterId;
+      // Les participants sont à la racine de l'événement, pas dans extendedProps
+      const participants = event.participants || [];
+      const presenterId = event.presenterActor?.id || event.extendedProps?.presenterId;
       
       // Vérifier les acteurs
       const involvedActorIds = new Set();
@@ -598,46 +599,126 @@ function AppContent() {
     }
   }, [currentView]);
 
-  // FALLBACK: Synchronisation initiale des filtres ViewsPanel si le calendrier n'est pas encore prêt
-  // Ce useEffect ne doit s'exécuter qu'une seule fois au premier chargement pour éviter d'écraser le filtrage dynamique
-  // TEMPORAIREMENT DÉSACTIVÉ POUR TESTER
+  // FALLBACK: Synchronisation initiale des filtres ViewsPanel au premier chargement SEULEMENT
+  const [hasInitialSync, setHasInitialSync] = useState(false);
+  
   useEffect(() => {
-    console.log('🚨 [FALLBACK] useEffect de fallback DÉSACTIVÉ temporairement');
-    return; // Désactiver temporairement
-    // Ne s'exécuter que si le calendrier n'est pas encore initialisé ET que c'est le premier chargement
-    const isCalendarReady = calendarRef.current && calendarRef.current.getApi();
-    
-    console.log('🔍 [FALLBACK] useEffect déclenché - Calendar ready:', isCalendarReady);
-    console.log('🔍 [FALLBACK] eventsFromStore.length:', eventsFromStore?.length);
-    
-    // Condition plus stricte : seulement si le calendrier n'est pas prêt ET qu'on a des événements pour la première fois
-    if (!isCalendarReady && eventsFromStore && eventsFromStore.length > 0) {
-      console.log('⚠️ [FALLBACK] ATTENTION: Le useEffect de fallback s\'exécute encore!');
-      console.log('📅 [FALLBACK] Synchronisation initiale avant calendrier prêt');
+    // Synchronisation initiale seulement UNE FOIS si on a des événements et que le ViewsPanel est vide
+    if (!hasInitialSync && eventsFromStore && eventsFromStore.length > 0) {
+      const currentActorsCount = Object.keys(filters.actors).length;
+      const currentGroupsCount = Object.keys(filters.groups).length;
+      const currentColorsCount = Object.keys(filters.colors).length;
       
-      // Extraire les acteurs, groupes, couleurs de TOUS les événements comme fallback
-      const { actors, groups, colors } = extractItemsFromEvents(eventsFromStore, groupsById);
-      
-      console.log('🔄 [FALLBACK] ViewsPanel synchronisé (tous événements):', {
+      console.log('🔄 [INIT] Vérification synchronisation initiale:', {
         eventsCount: eventsFromStore.length,
+        currentActorsCount,
+        currentGroupsCount,
+        currentColorsCount,
+        hasInitialSync
+      });
+      
+      // Si le ViewsPanel est vide, faire la synchronisation initiale
+      if (currentActorsCount === 0 && currentGroupsCount === 0 && currentColorsCount === 0) {
+        console.log('🚀 [INIT] Synchronisation initiale du ViewsPanel (ViewsPanel vide)');
+        
+        // Extraire les acteurs, groupes, couleurs de TOUS les événements
+        const { actors, groups, colors } = extractItemsFromEvents(eventsFromStore, groupsById);
+        
+        console.log('🔄 [INIT] ViewsPanel synchronisé (tous événements):', {
+          eventsCount: eventsFromStore.length,
+          actors: Array.from(actors),
+          groups: Array.from(groups),
+          colors: Array.from(colors)
+        });
+        
+        dispatch(updateVisibleViewItems({
+          actors: Array.from(actors),
+          groups: Array.from(groups),
+          colors: Array.from(colors)
+        }));
+      }
+      
+      // Marquer la synchronisation initiale comme faite (même si ViewsPanel n'était pas vide)
+      if (!hasInitialSync) {
+        console.log('🚀 [INIT] Marquage hasInitialSync = true pour activer CRUD_SYNC');
+        setHasInitialSync(true);
+      }
+    }
+  }, [eventsFromStore, groupsById, filters, dispatch, hasInitialSync]);
+
+  // Synchronisation automatique du ViewsPanel quand les événements changent (après ajout/modification/suppression)
+  useEffect(() => {
+    // Ne pas interférer avec la synchronisation initiale
+    if (!hasInitialSync) return;
+    
+    // Vérifier si le calendrier est prêt et qu'on a des événements
+    if (calendarRef.current && calendarRef.current.getApi() && eventsFromStore) {
+      const calendarApi = calendarRef.current.getApi();
+      const currentView = calendarApi.view;
+      
+      console.log('🔄 [AUTO_SYNC] Synchronisation automatique du ViewsPanel après changement d\'événements');
+      console.log('🔄 [AUTO_SYNC] Vue courante:', {
+        start: currentView.activeStart,
+        end: currentView.activeEnd,
+        type: currentView.type
+      });
+      
+      // Filtrer les événements par la période visible (même logique que datesSet)
+      const visibleEvents = filterEventsByDateRange(eventsFromStore, currentView.activeStart, currentView.activeEnd);
+      console.log('🔄 [AUTO_SYNC] Événements visibles:', visibleEvents.length, '/', eventsFromStore.length);
+      
+      // Extraire les acteurs, groupes, couleurs des événements visibles
+      const { actors, groups, colors } = extractItemsFromEvents(visibleEvents, groupsById);
+      
+      console.log('🔄 [AUTO_SYNC] Éléments extraits:', {
         actors: Array.from(actors),
         groups: Array.from(groups),
         colors: Array.from(colors)
       });
       
-      console.log('🚨 [FALLBACK] DISPATCH updateVisibleViewItems avec TOUTES les couleurs!');
+      // Mettre à jour le ViewsPanel avec les éléments de la vue courante
       dispatch(updateVisibleViewItems({
         actors: Array.from(actors),
         groups: Array.from(groups),
         colors: Array.from(colors)
       }));
-    } else {
-      console.log('✅ [FALLBACK] useEffect de fallback ignoré:', {
-        isCalendarReady,
-        hasEvents: eventsFromStore && eventsFromStore.length > 0
-      });
     }
-  }, [dispatch, groupsById]); // Retirer eventsFromStore des dépendances pour éviter les re-exécutions
+  }, [eventsFromStore, groupsById, hasInitialSync, dispatch]);
+
+  // Synchronisation après les opérations CRUD (create/update/delete) d'événements
+  const eventsStatus = useSelector(selectEventsStatus);
+  useEffect(() => {
+    // Déclencher la synchronisation après qu'une opération CRUD soit terminée avec succès
+    if (hasInitialSync && eventsStatus === 'succeeded' && calendarRef.current && calendarRef.current.getApi()) {
+      const calendarApi = calendarRef.current.getApi();
+      const currentView = calendarApi.view;
+      
+      console.log('🔄 [CRUD_SYNC] Synchronisation après opération CRUD réussie');
+      console.log('🔄 [CRUD_SYNC] Status:', eventsStatus, 'Events count:', eventsFromStore?.length);
+      
+      if (eventsFromStore && eventsFromStore.length > 0) {
+        // Filtrer les événements par la période visible
+        const visibleEvents = filterEventsByDateRange(eventsFromStore, currentView.activeStart, currentView.activeEnd);
+        console.log('🔄 [CRUD_SYNC] Événements visibles:', visibleEvents.length, '/', eventsFromStore.length);
+        
+        // Extraire les acteurs, groupes, couleurs des événements visibles
+        const { actors, groups, colors } = extractItemsFromEvents(visibleEvents, groupsById);
+        
+        console.log('🔄 [CRUD_SYNC] Éléments extraits:', {
+          actors: Array.from(actors),
+          groups: Array.from(groups),
+          colors: Array.from(colors)
+        });
+        
+        // Mettre à jour le ViewsPanel
+        dispatch(updateVisibleViewItems({
+          actors: Array.from(actors),
+          groups: Array.from(groups),
+          colors: Array.from(colors)
+        }));
+      }
+    }
+  }, [eventsStatus, hasInitialSync, eventsFromStore, groupsById, dispatch]);
 
   // Fonction pour synchroniser l'état local avec les événements du calendrier
 
