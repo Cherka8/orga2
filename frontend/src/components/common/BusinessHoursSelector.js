@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { setSlotMinTime, setSlotMaxTime } from '../../redux/slices/calendarSettingsSlice';
@@ -8,6 +8,7 @@ const BusinessHoursSelector = () => {
   const { t } = useTranslation();
   const { slotMinTime, slotMaxTime } = useSelector(state => state.calendarSettings);
   const [error, setError] = useState('');
+  const validationTimeoutRef = useRef(null);
 
   // Helper function to convert time string to minutes for comparison
   const timeToMinutes = (timeStr) => {
@@ -15,32 +16,70 @@ const BusinessHoursSelector = () => {
     return hours * 60 + minutes;
   };
 
+  // Helper function to validate time comparison with delay
+  const validateTimeComparison = (startTime, endTime) => {
+    console.log('🕐 Validating times:', { startTime, endTime });
+    
+    // Check if end time is after start time
+    if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
+      setError(t('businessHoursSelector.errorEndAfterStart'));
+      return false;
+    }
+    
+    // Check if start time is before end time
+    if (timeToMinutes(startTime) >= timeToMinutes(endTime)) {
+      setError(t('businessHoursSelector.errorStartBeforeEnd'));
+      return false;
+    }
+    
+    setError('');
+    return true;
+  };
+  
+  // Helper function to schedule delayed validation
+  const scheduleValidation = (startTime, endTime) => {
+    // Clear any existing timeout
+    if (validationTimeoutRef.current) {
+      clearTimeout(validationTimeoutRef.current);
+    }
+    
+    // Schedule validation after 800ms delay
+    validationTimeoutRef.current = setTimeout(() => {
+      console.log('⏰ Delayed validation triggered');
+      validateTimeComparison(startTime, endTime);
+    }, 800);
+  };
+
   const handleStartTimeChange = (e) => {
     const newStartTime = e.target.value;
     const formattedTime = `${newStartTime}:00`;
     
-    // Check if new start time is before end time
-    if (timeToMinutes(newStartTime) >= timeToMinutes(slotMaxTime)) {
-      setError(t('businessHoursSelector.errorStartBeforeEnd'));
-      return;
-    }
+    console.log('🔄 Start time changed to:', newStartTime);
     
-    setError('');
+    // Always update the display immediately
     dispatch(setSlotMinTime(formattedTime));
+    
+    // Clear any existing error immediately
+    setError('');
+    
+    // Schedule delayed validation
+    scheduleValidation(newStartTime, slotMaxTime.substring(0, 5));
   };
 
   const handleEndTimeChange = (e) => {
     const newEndTime = e.target.value;
     const formattedTime = `${newEndTime}:00`;
     
-    // Check if new end time is after start time
-    if (timeToMinutes(newEndTime) <= timeToMinutes(slotMinTime)) {
-      setError(t('businessHoursSelector.errorEndAfterStart'));
-      return;
-    }
+    console.log('🔄 End time changed to:', newEndTime);
     
-    setError('');
+    // Always update the display immediately
     dispatch(setSlotMaxTime(formattedTime));
+    
+    // Clear any existing error immediately
+    setError('');
+    
+    // Schedule delayed validation
+    scheduleValidation(slotMinTime.substring(0, 5), newEndTime);
   };
 
   // Format time for display in the input (HH:MM)

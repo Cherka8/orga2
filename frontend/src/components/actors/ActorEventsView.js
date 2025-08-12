@@ -109,7 +109,7 @@ const ActorEventsView = () => {
   return (
     <div className="flex flex-1 h-full overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-blue-50">
       {/* Colonne principale pour les événements - avec défilement indépendant */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* En-tête fixe */}
         <div className="flex items-center p-4 bg-white bg-opacity-70 border-b border-indigo-100 shadow-sm">
           <div className="flex-shrink-0 mr-3">
@@ -152,8 +152,8 @@ const ActorEventsView = () => {
         </div>
       </div>
 
-      {/* Colonne de droite pour la liste des acteurs */}
-      <div className="w-72 flex-shrink-0 border-l border-indigo-100 shadow-inner bg-white bg-opacity-90 overflow-hidden flex flex-col">
+      {/* Colonne de droite pour la liste des acteurs - hauteur fixe indépendante */}
+      <div className="w-72 h-screen flex-shrink-0 border-l border-indigo-100 shadow-inner bg-white bg-opacity-90 overflow-hidden flex flex-col">
         <SelectableActorList 
           actors={filteredActors} 
           selectedActorId={selectedActorId} 

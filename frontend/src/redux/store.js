@@ -9,12 +9,13 @@ import calendarSettingsReducer from './slices/calendarSettingsSlice';
 import viewsReducer from './slices/viewsSlice';
 import eventsReducer from './slices/eventsSlice';
 import authReducer from './slices/authSlice';
+import preferencesReducer from './preferencesSlice';
 
 // Configuration de la persistance
 const persistConfig = {
   key: 'organaizer',
   storage,
-  whitelist: ['actors', 'groups', 'calendarSettings', 'views', 'auth'] // Seulement ces reducers seront persistés
+  whitelist: ['actors', 'groups', 'calendarSettings', 'views', 'auth', 'preferences'] // Seulement ces reducers seront persistés
 };
 
 const appReducer = combineReducers({
@@ -23,7 +24,8 @@ const appReducer = combineReducers({
   calendarSettings: calendarSettingsReducer,
   views: viewsReducer,
   events: eventsReducer,
-  auth: authReducer
+  auth: authReducer,
+  preferences: preferencesReducer
 });
 
 const rootReducer = (state, action) => {

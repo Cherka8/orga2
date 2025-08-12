@@ -9,6 +9,7 @@ import {
 import { setEvents as setEventsInStore, createEvent, fetchEvents, updateEvent, selectVisibleEvents, selectEvents, selectEventsStatus } from './redux/slices/eventsSlice';
 import { selectAllActors, fetchActors } from './redux/slices/actorsSlice';
 import { selectAllGroups, fetchGroups } from './redux/slices/groupsSlice';
+import { fetchPreferences } from './redux/preferencesSlice'; // Import de l'action fetchPreferences
 import { useTranslation } from 'react-i18next'; // Import useTranslation
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -491,7 +492,8 @@ function AppContent() {
       await Promise.all([
         dispatch(fetchActors()),
         dispatch(fetchGroups()),
-        dispatch(fetchEvents()) 
+        dispatch(fetchEvents()),
+        dispatch(fetchPreferences()) // On charge aussi les préférences
       ]);
       setDataLoading(false);
     };

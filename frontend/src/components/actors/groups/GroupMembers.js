@@ -192,11 +192,11 @@ const GroupMembers = ({ group, allActors }) => {
   useEffect(() => {
     if (group && allActors) {
       const memberActors = allActors.filter(actor => 
-        group.members.includes(actor.id)
+        group.members && group.members.includes(actor.id)
       );
       
       const nonMemberActors = allActors.filter(actor => 
-        !group.members.includes(actor.id) && actor.type !== ACTOR_TYPES.LOCATION
+        (!group.members || !group.members.includes(actor.id)) && actor.type !== ACTOR_TYPES.LOCATION
       );
       
       // Utiliser des fonctions de mise à jour pour éviter les problèmes de dépendances
@@ -248,7 +248,7 @@ const GroupMembers = ({ group, allActors }) => {
     }
     
     const actorId = active.id;
-    const isInGroup = group.members.includes(actorId);
+    const isInGroup = group.members && group.members.includes(actorId);
     
     // Si on déplace vers la zone des membres et que l'acteur n'est pas déjà dans le groupe
     if (over.id === 'members-container' && !isInGroup) {

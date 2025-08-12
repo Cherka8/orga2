@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config'; // Importer ConfigModule
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -20,23 +21,25 @@ import { GroupModule } from './group/group.module';
 import { GroupMemberModule } from './group-member/group-member.module';
 import { SharedCalendarAccessTokenModule } from './shared-calendar-access-token/shared-calendar-access-token.module';
 import { ColorModule } from './color/color.module';
+import { PreferencesModule } from './preferences/preferences.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ // Configurer ConfigModule
-      isGlobal: true, // Rend ConfigModule disponible globalement
-      envFilePath: '.env', // Spécifie le chemin du fichier .env
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
     }),
+    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost:27017/organaizer_preferences'),
     TypeOrmModule.forRoot({
-      type: 'mysql', // Type de base de données
-      host: 'localhost', // Votre hôte
-      port: 3306, // Votre port
-      username: 'root', // Votre nom d'utilisateur
-      password: '', // Votre mot de passe (laissé vide ici)
-      database: 'organaizer', // Le nom de votre base de données
-      entities: [Account, Company, Actor, Event, EventParticipant, Group, GroupMember, SharedCalendarAccessToken], // Nous ajouterons nos entités (modèles de table) ici plus tard
-      synchronize: true, // IMPORTANT: true pour le développement, false pour la production (utiliser les migrations)
-      // autoLoadEntities: true, // Alternative à 'entities', peut être pratique
+      type: 'mysql',
+      host: process.env.MYSQL_HOST || 'localhost',
+      port: parseInt(process.env.MYSQL_PORT ?? '3306', 10),
+      username: process.env.MYSQL_USER || 'root',
+      password: process.env.MYSQL_PASSWORD || '',
+      database: process.env.MYSQL_DB || 'organaizer',
+      entities: [Account, Company, Actor, Event, EventParticipant, Group, GroupMember, SharedCalendarAccessToken],
+      synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
+      // autoLoadEntities: true,
     }),
     ActorModule,
     AuthModule,
@@ -47,6 +50,7 @@ import { ColorModule } from './color/color.module';
     GroupMemberModule,
     SharedCalendarAccessTokenModule,
     ColorModule,
+    PreferencesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
